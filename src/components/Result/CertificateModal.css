@@ -1,0 +1,207 @@
+.cert-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 20, 0.88);
+  backdrop-filter: blur(14px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.cert-modal-dialog {
+  max-width: 860px;
+  width: 100%;
+  max-height: 94vh;
+  overflow-y: auto;
+}
+
+.cert-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Luxury 3D Certificate */
+.luxury-cert-card {
+  background: linear-gradient(135deg, #0a0f24 0%, #101736 100%);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 35px var(--gold-glow);
+  color: var(--ivory-silk);
+  font-family: 'Inter', sans-serif;
+}
+
+.cert-outer-border {
+  border: 2.5px solid var(--gold-default);
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 20px rgba(212, 175, 122, 0.15);
+}
+
+.cert-inner-border {
+  border: 1px dashed rgba(212, 175, 122, 0.4);
+  padding: 2.5rem 2rem;
+  text-align: center;
+  border-radius: var(--radius-sm);
+}
+
+.cert-emblem {
+  font-size: 2.2rem;
+  color: var(--gold-light);
+  text-shadow: 0 0 16px var(--gold-glow);
+  margin-bottom: 0.5rem;
+}
+
+.cert-board-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: var(--gold-light);
+  text-transform: uppercase;
+}
+
+.cert-subtitle {
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  color: var(--muted-platinum);
+  margin-top: 0.25rem;
+}
+
+.cert-body {
+  margin: 2.2rem 0;
+}
+
+.cert-text-lead {
+  font-size: 0.95rem;
+  color: var(--muted-platinum);
+  margin-bottom: 0.5rem;
+}
+
+.cert-candidate-name {
+  font-family: 'Fraunces', serif;
+  font-size: 2.6rem;
+  color: var(--ivory-silk);
+  background: linear-gradient(135deg, #fff 0%, var(--gold-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0.4rem 0 1rem;
+}
+
+.cert-text-statement {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--muted-platinum);
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.cert-exam-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem;
+  color: var(--gold-light);
+  margin-top: 0.5rem;
+}
+
+.cert-metrics-row {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin: 2.5rem 0;
+  border-top: 1px solid rgba(212, 175, 122, 0.2);
+  border-bottom: 1px solid rgba(212, 175, 122, 0.2);
+  padding: 1.25rem 0;
+}
+
+.cert-metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.cert-m-val {
+  font-family: 'Fraunces', serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--emerald-teal);
+}
+
+.cert-m-lbl {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-platinum);
+}
+
+.cert-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 2rem;
+  padding: 0 1rem;
+}
+
+.cert-sig-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sig-line {
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-top: 1px solid var(--gold-default);
+  padding-top: 0.5rem;
+  min-width: 170px;
+}
+
+.sig-sub {
+  font-size: 0.72rem;
+  color: var(--muted-platinum);
+}
+
+.seal-circle {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 2px dashed var(--gold-default);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--gold-light);
+  letter-spacing: 0.08em;
+  box-shadow: 0 0 12px var(--gold-glow);
+}
+
+/* Print CSS */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .luxury-cert-card, .luxury-cert-card * {
+    visibility: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .luxury-cert-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .cert-outer-border {
+    border-color: #333 !important;
+  }
+  .cert-candidate-name {
+    -webkit-text-fill-color: #000 !important;
+  }
+}

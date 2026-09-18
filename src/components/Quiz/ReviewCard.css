@@ -1,0 +1,208 @@
+.review-card-item {
+  background: var(--midnight-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--gold-border);
+  box-shadow: var(--lux-shadow-md);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  transition: transform 0.25s var(--ease-elastic), box-shadow 0.25s ease;
+}
+
+.review-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lux-shadow-lg);
+}
+
+.review-card-item.correct {
+  border-left: 4px solid var(--emerald-teal);
+}
+
+.review-card-item.incorrect {
+  border-left: 4px solid var(--crimson-garnet);
+}
+
+.review-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.q-index-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+}
+
+.review-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bookmark-star-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--muted-platinum);
+  transition: transform 0.2s var(--ease-elastic), color 0.2s ease;
+  padding: 0.25rem;
+}
+
+.bookmark-star-btn:hover {
+  transform: scale(1.2);
+  color: var(--gold-light);
+}
+
+.bookmark-star-btn.bookmarked {
+  color: var(--gold-default);
+  text-shadow: 0 0 12px var(--gold-glow);
+}
+
+.outcome-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-pill);
+}
+
+.outcome-badge.correct {
+  background: rgba(45, 212, 191, 0.15);
+  color: var(--emerald-teal);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+}
+
+.outcome-badge.incorrect {
+  background: rgba(251, 113, 133, 0.15);
+  color: var(--crimson-garnet);
+  border: 1px solid rgba(251, 113, 133, 0.35);
+}
+
+.review-stem {
+  font-family: 'Fraunces', serif;
+  font-size: 1.2rem;
+  line-height: 1.55;
+  color: var(--ivory-silk);
+  margin-bottom: 1.5rem;
+}
+
+.options-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.option-row {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: rgba(10, 15, 36, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: border-color 0.2s ease;
+}
+
+.option-row.is-correct {
+  border: 1.5px solid var(--emerald-teal);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+.option-row.is-user-wrong {
+  border: 1.5px solid var(--crimson-garnet);
+  background: rgba(251, 113, 133, 0.08);
+}
+
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.opt-indicator {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.opt-indicator.emerald { color: var(--emerald-teal); }
+.opt-indicator.garnet { color: var(--crimson-garnet); }
+.opt-indicator.neutral { color: var(--muted-platinum); opacity: 0.4; }
+
+.opt-text {
+  font-size: 0.95rem;
+  color: var(--ivory-silk);
+  flex: 1;
+}
+
+.user-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ivory-silk);
+}
+
+/* Collapsible Distractor Rationale */
+.toggle-distractor-btn {
+  background: transparent;
+  border: none;
+  color: var(--gold-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.6rem;
+  align-self: flex-start;
+  padding: 0;
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.toggle-distractor-btn:hover {
+  opacity: 1;
+}
+
+.distractor-text {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--muted-platinum);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--gold-default);
+}
+
+/* Master Rationale Box */
+.master-rationale-box {
+  background: linear-gradient(180deg, #16204d 0%, #0d1436 100%);
+  border: 1px solid var(--gold-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  padding: 1.4rem;
+}
+
+.rationale-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--gold-light);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.6rem;
+}
+
+.rationale-content {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ivory-silk);
+  opacity: 0.92;
+  margin: 0;
+}

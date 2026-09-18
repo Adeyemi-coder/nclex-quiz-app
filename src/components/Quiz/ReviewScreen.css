@@ -1,0 +1,84 @@
+.review-screen-layout {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.review-screen-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.review-hero-title {
+  font-family: 'Fraunces', serif;
+  font-size: 2.2rem;
+  color: var(--ivory-silk);
+  margin: 0.3rem 0;
+}
+
+.review-subtext {
+  color: var(--muted-platinum);
+  font-size: 0.95rem;
+}
+
+.review-filters-bar {
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(212, 175, 122, 0.15);
+  padding-bottom: 1rem;
+  margin-bottom: 2.5rem;
+  overflow-x: auto;
+}
+
+.filter-chip {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted-platinum);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  color: var(--ivory-silk);
+}
+
+.filter-chip.active {
+  background: rgba(212, 175, 122, 0.15);
+  color: var(--gold-light);
+  border-color: var(--gold-border);
+}
+
+.keyboard-hint-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(212, 175, 122, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 2rem;
+  font-size: 0.85rem;
+  color: var(--muted-platinum);
+}
+
+.keyboard-keys kbd {
+  background: var(--midnight-surface);
+  border: 1px solid var(--gold-border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  color: var(--gold-light);
+  font-family: monospace;
+  font-weight: 700;
+  margin: 0 0.2rem;
+}

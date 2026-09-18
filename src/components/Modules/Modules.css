@@ -1,0 +1,186 @@
+.modules-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+}
+
+.modules-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--gold-border);
+  padding-bottom: 2rem;
+}
+
+.modules-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.modules-title {
+  font-family: 'Fraunces', serif;
+  font-size: 2.6rem;
+  color: var(--ivory-silk);
+  margin: 0 0 0.5rem;
+}
+
+.modules-subtitle {
+  color: var(--muted-platinum);
+  font-size: 1rem;
+  max-width: 580px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Curriculum Filter Bar */
+.modules-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.modules-search-input {
+  background: var(--midnight-surface);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-pill);
+  padding: 0.75rem 1.4rem;
+  color: var(--ivory-silk);
+  font-size: 0.95rem;
+  min-width: 260px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modules-search-input:focus {
+  border-color: var(--gold-default);
+  box-shadow: 0 0 16px var(--gold-glow);
+}
+
+.modules-count-pill {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold-light);
+  background: rgba(212, 175, 122, 0.12);
+  border: 1px solid var(--gold-border);
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-pill);
+}
+
+/* 3D Grid Layout */
+.modules-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.75rem;
+}
+
+.module-spec-card {
+  background: var(--midnight-glass);
+  backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--gold-border);
+  box-shadow: var(--lux-shadow-md);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  transition: transform 0.25s var(--ease-elastic), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.module-spec-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--lux-shadow-lg);
+  border-color: var(--gold-default);
+}
+
+.module-spec-card.featured {
+  background: linear-gradient(145deg, rgba(22, 32, 74, 0.9) 0%, rgba(10, 15, 36, 0.8) 100%);
+  border: 1.5px solid var(--gold-default);
+}
+
+.module-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.module-card-icon {
+  font-size: 2.2rem;
+  background: rgba(255, 255, 255, 0.05);
+  width: 54px;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.module-card-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  background: rgba(212, 175, 122, 0.15);
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(212, 175, 122, 0.3);
+}
+
+.module-card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.35rem;
+  color: var(--ivory-silk);
+  margin: 0 0 0.75rem;
+  line-height: 1.35;
+}
+
+.module-card-desc {
+  color: var(--muted-platinum);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+  flex: 1;
+}
+
+.module-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 1.25rem;
+}
+
+.module-card-meta {
+  font-size: 0.8rem;
+  color: var(--muted-platinum);
+}
+
+.module-launch-btn {
+  background: linear-gradient(135deg, var(--gold-default) 0%, var(--gold-deep) 100%);
+  color: #050814;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 4px 12px rgba(212, 175, 122, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.module-launch-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(212, 175, 122, 0.45);
+}
