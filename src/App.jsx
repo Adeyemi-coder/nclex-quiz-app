@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './components/Home/Home.jsx';
 import Modules from './components/Modules/Modules.jsx';
 import Quiz from './components/Quiz/Quiz.jsx';
