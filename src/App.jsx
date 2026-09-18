@@ -14,7 +14,6 @@ export default function App() {
     <Router>
       <div className="app">
         <Header />
-
         <main className="app-main">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -25,7 +24,6 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
-
         <Footer />
       </div>
     </Router>
