@@ -1,9 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-export default function App() {
-  return (
-    <Router basename={import.meta.env.BASE_URL}>
-      {/* your routes */}
-    </Router>
-  );
-}
+export default defineConfig({
+  plugins: [react()],
+  base: '/nclex-quiz-app/',
+})
