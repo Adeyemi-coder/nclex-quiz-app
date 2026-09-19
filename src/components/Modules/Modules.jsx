@@ -3,173 +3,214 @@ import { Link } from 'react-router-dom';
 import { questions } from '../../data/questions.js';
 import './Modules.css';
 
-const COURSE_MODULES = [
+// Master modules metadata list
+const MODULES_DATA = [
   {
-    id: 'all',
-    title: 'Comprehensive Clinical Simulation',
-    description: 'Timed multi-system trial across all 11 NCLEX & NMCN clinical domains under standard test conditions.',
-    icon: '⚡',
-    difficulty: 'Adaptive Level',
-    featured: true
-  },
-  {
-    id: 'Pharmacology',
+    id: 'pharmacology',
     title: 'Pharmacology & Parenteral Therapies',
-    description: 'Drug classifications, adverse reactions, therapeutic drug levels, and high-alert parenteral calculations.',
     icon: '💊',
-    difficulty: 'Licensure High-Yield'
+    tag: 'Licensure High-Yield',
+    category: 'pharmacology',
+    desc: 'Drug classifications, adverse reactions, therapeutic drug levels, and high-alert parenteral medications.'
   },
   {
-    id: 'Cardiovascular',
+    id: 'cardiovascular',
     title: 'Cardiovascular Nursing',
-    description: 'Hemodynamic instability, dysrhythmias, 12-lead ECG changes, and acute coronary syndrome protocols.',
     icon: '🫀',
-    difficulty: 'Clinical Core'
+    tag: 'Clinical Core',
+    category: 'cardiovascular',
+    desc: 'Hemodynamic instability, dysrhythmias, 12-lead ECG changes, and acute coronary syndrome protocols.'
   },
   {
-    id: 'Respiratory',
+    id: 'respiratory',
     title: 'Respiratory Care',
-    description: 'Mechanical ventilation, PEEP hemodynamics, arterial blood gases, ARDS, and airway emergencies.',
     icon: '🫁',
-    difficulty: 'Clinical Core'
+    tag: 'Clinical Core',
+    category: 'respiratory',
+    desc: 'Mechanical ventilation, PEEP hemodynamics, arterial blood gases, ARDS, and airway emergencies.'
   },
   {
-    id: 'Emergency Nursing',
+    id: 'emergency',
     title: 'Emergency & Critical Care',
-    description: 'ACLS resuscitation algorithms, trauma triage (START), shock hemodynamics, and toxidromes.',
     icon: '🚨',
-    difficulty: 'Priority Specialty'
+    tag: 'Priority Specialty',
+    category: 'emergency',
+    desc: 'ACLS resuscitation algorithms, trauma triage (START), shock hemodynamics, and burn protocols.'
   },
   {
-    id: 'Maternal Nursing',
+    id: 'maternal',
     title: 'Maternal & Newborn Health',
-    description: 'Fetal monitoring deceleration interpretation, postpartum hemorrhage, preeclampsia, and neonatal NRP.',
     icon: '👶',
-    difficulty: 'Licensure High-Yield'
+    tag: 'Licensure High-Yield',
+    category: 'maternal',
+    desc: 'Fetal monitoring deceleration interpretation, postpartum hemorrhage, preeclampsia, and neonatal care.'
   },
   {
-    id: 'Pediatrics',
+    id: 'pediatrics',
     title: 'Pediatric Nursing',
-    description: 'Developmental milestones, congenital cardiac defects, pediatric emergencies, and fluid resuscitation.',
     icon: '🧸',
-    difficulty: 'Clinical Core'
+    tag: 'Clinical Core',
+    category: 'pediatrics',
+    desc: 'Developmental milestones, congenital cardiac defects, pediatric emergencies, and fluid resuscitation.'
   },
   {
-    id: 'Mental Health',
+    id: 'mental-health',
     title: 'Mental Health & Psychiatric Nursing',
-    description: 'Crisis de-escalation, suicide precautions, mood disorders, schizophrenia, and psychopharmacology.',
     icon: '🧠',
-    difficulty: 'Client Care'
+    tag: 'Client Care',
+    category: 'mental-health',
+    desc: 'Crisis de-escalation, suicide precautions, mood disorders, schizophrenia, and psychopharmacology.'
   },
   {
-    id: 'Renal Nursing',
+    id: 'renal',
     title: 'Renal Nursing & Electrolyte Disorders',
-    description: 'Acute kidney injury staging, hemodialysis/peritoneal protocols, and life-threatening hyperkalemia.',
     icon: '🧪',
-    difficulty: 'Clinical Core'
+    tag: 'Clinical Core',
+    category: 'renal',
+    desc: 'Acute kidney injury staging, peritoneal dialysis, hemodialysis peritonitis, and life-threatening hyperkalemia.'
   },
   {
-    id: 'Fundamentals',
+    id: 'fundamentals',
     title: 'Fundamentals of Nursing',
-    description: 'Aseptic sterile technique, wound staging, clinical prioritization frameworks, and medication rights.',
     icon: '📋',
-    difficulty: 'Foundational'
+    tag: 'Foundational',
+    category: 'fundamentals',
+    desc: 'Aseptic sterile technique, wound staging, clinical prioritization frameworks, and medication rights.'
   },
   {
-    id: 'Leadership and Delegation',
+    id: 'leadership',
     title: 'Leadership & Delegation',
-    description: 'Five Rights of Delegation, RN vs. LPN/LVN vs. UAP assignment scopes, and conflict resolution.',
     icon: '⚖️',
-    difficulty: 'Management of Care'
+    tag: 'Management of Care',
+    category: 'leadership',
+    desc: 'Five Rights of Delegation, RN vs. LPN/LVN vs. UAP assignment scopes, and conflict resolution.'
   },
   {
-    id: 'Infection Control',
+    id: 'infection-control',
     title: 'Infection Control & Safety',
-    description: 'Transmission-based precautions (Airborne/Droplet/Contact), HAI prevention bundles, and sterile fields.',
     icon: '🛡️',
-    difficulty: 'Safety & Quality'
+    tag: 'Safety & Quality',
+    category: 'infection-control',
+    desc: 'Transmission-based precautions (Airborne/Droplet/Contact), HAI prevention bundles, and sterile fields.'
   }
 ];
 
 export default function Modules() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
 
   const filteredModules = useMemo(() => {
-    return COURSE_MODULES.filter(mod =>
-      mod.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mod.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [searchTerm]);
+    return MODULES_DATA.filter((mod) => {
+      const matchesSearch =
+        mod.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        mod.desc.toLowerCase().includes(searchTerm.toLowerCase());
 
-  function getQuestionCount(catId) {
-    if (catId === 'all') return questions.length;
-    return questions.filter(
-      q => q.category?.toLowerCase() === catId.toLowerCase()
-    ).length;
-  }
+      if (activeFilter === 'all') return matchesSearch;
+      if (activeFilter === 'high-yield') {
+        return matchesSearch && mod.tag.toLowerCase().includes('high-yield');
+      }
+      if (activeFilter === 'core') {
+        return matchesSearch && mod.tag.toLowerCase().includes('core');
+      }
+      return matchesSearch;
+    });
+  }, [searchTerm, activeFilter]);
 
   return (
-    <div className="modules-page-container">
-      <div className="modules-header">
-        <div>
-          <span className="modules-eyebrow">NCLEX / NMCN Examination Bank</span>
-          <h1 className="modules-title">Curriculum Modules</h1>
-          <p className="modules-subtitle">
-            Select a targeted clinical discipline to launch a 50-item exam or start a full 550-question simulation.
-          </p>
-        </div>
-        <Link to="/dashboard" className="ghost-btn">
-          View My Dashboard →
-        </Link>
-      </div>
+    <div className="modules-catalog-container">
+      {/* Header & Meta */}
+      <header className="modules-page-header">
+        <span className="curriculum-kicker">NCLEX / NMCN EXAMINATION BANK</span>
+        <h1 className="curriculum-main-title">Curriculum Modules</h1>
+        <p className="curriculum-sub-desc">
+          Select a targeted clinical discipline to launch a 50-item exam, study flashcard rationales, or launch a full simulation.
+        </p>
 
-      {/* Filter and Search Bar */}
-      <div className="modules-controls">
-        <input
-          type="text"
-          className="modules-search-input"
-          placeholder="Search specialty, keyword, or topic..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
-        <span className="modules-count-pill">
-          {filteredModules.length} Modules Available
-        </span>
-      </div>
+        <div className="curriculum-controls">
+          <div className="search-input-wrapper">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              className="module-search-field"
+              placeholder="Search specialty, drug, or protocol..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
 
-      {/* Specialty Modules Grid */}
-      <div className="modules-catalog-grid">
-        {filteredModules.map(module => {
-          const count = getQuestionCount(module.id);
-
-          return (
-            <div
-              key={module.id}
-              className={`module-spec-card ${module.featured ? 'featured' : ''}`}
+          <div className="filter-pills-row">
+            <button
+              type="button"
+              className={`filter-chip ${activeFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('all')}
             >
-              <div>
-                <div className="module-card-header">
-                  <div className="module-card-icon">{module.icon}</div>
-                  <span className="module-card-badge">{module.difficulty}</span>
-                </div>
+              All Specialties ({MODULES_DATA.length})
+            </button>
+            <button
+              type="button"
+              className={`filter-chip ${activeFilter === 'high-yield' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('high-yield')}
+            >
+              🔥 High Yield
+            </button>
+            <button
+              type="button"
+              className={`filter-chip ${activeFilter === 'core' ? 'active' : ''}`}
+              onClick={() => setActiveFilter('core')}
+            >
+              🏥 Clinical Core
+            </button>
+          </div>
+        </div>
+      </header>
 
-                <h3 className="module-card-title">{module.title}</h3>
-                <p className="module-card-desc">{module.description}</p>
+      {/* Flagship Exam Banner */}
+      <section className="simulation-banner-container">
+        <div className="sim-banner-left">
+          <div className="sim-tag-pill">⚡ NGN CAT BENCHMARK</div>
+          <h2 className="sim-title">Comprehensive Clinical Simulation</h2>
+          <p className="sim-desc">
+            Standardized 85-item diagnostic trial randomly sampled across all 11 clinical domains under strict NCLEX timing.
+          </p>
+          <span className="sim-meta-count">85 Questions · 102 Minutes · Drawn from 550 Item Bank</span>
+        </div>
+        <div className="sim-banner-right">
+          <Link to="/quiz" className="sim-start-cta">
+            Launch Simulation (85 Qs) →
+          </Link>
+        </div>
+      </section>
+
+      {/* 3-Column Specialty Cards Grid */}
+      <section className="specialties-grid">
+        {filteredModules.map((item) => (
+          <div key={item.id} className="curriculum-card">
+            <div className="card-top-content">
+              <div className="card-header-line">
+                <span className="specialty-symbol">{item.icon}</span>
+                <span className="specialty-badge">{item.tag}</span>
               </div>
+              <h3 className="specialty-heading">{item.title}</h3>
+              <p className="specialty-summary">{item.desc}</p>
+            </div>
 
-              <div className="module-card-footer">
-                <span className="module-card-meta">{count} NCLEX Questions</span>
+            <div className="card-bottom-actions">
+              <span className="q-count-indicator">50 NCLEX Questions</span>
+              <div className="card-btn-cluster">
+                <Link to="/flashcards" className="secondary-card-link" title="Study Flashcards">
+                  🃏 Cards
+                </Link>
                 <Link
-                  to={module.id === 'all' ? '/quiz' : `/quiz/${encodeURIComponent(module.id)}`}
-                  className="module-launch-btn"
+                  to={`/quiz/${encodeURIComponent(item.id)}`}
+                  className="primary-card-link"
                 >
                   Start Exam →
                 </Link>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }

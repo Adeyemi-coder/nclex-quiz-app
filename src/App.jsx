@@ -1,31 +1,36 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Header from './components/Layout/Header.jsx';
 import Home from './components/Home/Home.jsx';
 import Modules from './components/Modules/Modules.jsx';
 import Quiz from './components/Quiz/Quiz.jsx';
-import ReviewScreen from './components/Quiz/ReviewScreen.jsx';
+import FlashcardDeck from './components/Flashcards/FlashcardDeck.jsx';
 import Dashboard from './components/Dashboard/Dashboard.jsx';
-import Header from './components/Layout/Header.jsx';
-import Footer from './components/Layout/Footer.jsx';
-import './App.css';
+import SplashScreen from './components/Splash/SplashScreen.jsx';
 
 export default function App() {
+  // Always true on reload during development (or clear sessionStorage)
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
-    <Router>
-      <div className="app">
+    <>
+      {showSplash && (
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      )}
+
+      <div className="app-shell">
         <Header />
-        <main className="app-main">
+        <main>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/modules" element={<Modules />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/quiz/:category" element={<Quiz />} />
-            <Route path="/review" element={<ReviewScreen />} />
+            <Route path="/flashcards" element={<FlashcardDeck />} />
             <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
-        <Footer />
       </div>
-    </Router>
+    </>
   );
 }

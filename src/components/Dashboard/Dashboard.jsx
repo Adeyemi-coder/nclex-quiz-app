@@ -1,88 +1,201 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import StatCard from './StatCard.jsx';
-import CategoryBars from './CategoryBars.jsx';
-import ScoreSparkline from './ScoreSparkline.jsx';
-import RecentActivity from './RecentActivity.jsx';
 import { useProgress } from '../../hooks/useProgress.js';
 import './Dashboard.css';
 
 export default function Dashboard() {
   const {
-    history,
-    overallAccuracy,
-    totalAnswered,
-    currentStreak,
-    longestStreak,
-    categoryStats,
-    resetAllProgress // <--- Add this
+    history = [],
+    overallAccuracy = 0,
+    totalAnswered = 0,
+    currentStreak = 0,
+    longestStreak = 0,
+    categoryStats = {},
+    resetProgress,
   } = useProgress();
 
-  function handleReset() {
-    if (window.confirm("Are you sure you want to clear all exam history, streaks, and bookmarks?")) {
-      resetAllProgress();
-    }
-  }
+  // Passing probability benchmark calculation
+  const passingProbability = useMemo(() => {
+    if (totalAnswered < 20) return { label: 'Calibrating...', pct: null, tier: 'calibrating' };
+    if (overallAccuracy >= 75) return { label: 'High Pass Likelihood', pct: 94, tier: 'high' };
+    if (overallAccuracy >= 65) return { label: 'Moderate Pass Likelihood', pct: 72, tier: 'moderate' };
+    return { label: 'Remediation Required', pct: 38, tier: 'low' };
+  }, [overallAccuracy, totalAnswered]);
 
-  if (history.length === 0) {
-    return (
-      <div className="dashboard-container">
-        <div className="dash-section empty-dash-card">
-          <div className="empty-icon-art">⚡</div>
-          <h2 className="dashboard-title">Unlock Your Performance Analytics</h2>
-          <p style={{ color: 'var(--muted-platinum)', maxWidth: '480px', margin: '0.5rem auto 1.75rem' }}>
-            Take your first NCLEX exam module to generate real-time metrics, clinical accuracy charts, and category diagnostic insights.
-          </p>
-          <Link to="/" className="course-btn" style={{ display: 'inline-block' }}>
-            Start Your First Exam →
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  // Ranked specialties by weakness
+  const sortedCategories = useMemo(() => {
+    const entries = Object.entries(categoryStats || {});
+    return entries.map(([cat, stats]) => {
+      const total = stats.total || 0;
+      const correct = stats.correct || 0;
+      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+      return { category: cat, total, correct, pct };
+    }).sort((a, b) => a.pct - b.pct);
+  }, [categoryStats]);
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <div className="analytics-page-container">
+      {/* 1. Header & Actions */}
+      <header className="analytics-header">
         <div>
-          <span className="review-eyebrow">Candidate Diagnostic Intelligence</span>
-          <h1 className="dashboard-title">Performance Analytics</h1>
+          <span className="analytics-kicker">CANDIDATE DIAGNOSTIC INTELLIGENCE</span>
+          <h1 className="analytics-title">Performance Analytics</h1>
         </div>
-        {/* Reset Action Button */}
-        <button
-          type="button"
-          onClick={handleReset}
-          className="ghost-btn"
-          style={{ borderColor: 'rgba(251, 113, 133, 0.3)', color: 'var(--crimson-garnet)', fontSize: '0.8rem' }}
-        >
-          Reset All Data
-        </button>
-      </div>
+        <div className="analytics-header-actions">
+          <button
+            type="button"
+            className="reset-data-btn"
+            onClick={() => {
+              if (window.confirm('Reset all tracked test attempts and streak history?')) {
+                resetProgress?.();
+              }
+            }}
+          >
+            Reset All Data
+          </button>
+        </div>
+      </header>
 
-      {/* 1. Hero Stats Row */}
-      <div className="stats-hero-grid">
-        <StatCard label="Overall Accuracy" value={`${overallAccuracy}%`} subtext="Across all disciplines" highlight />
-        <StatCard label="Questions Answered" value={totalAnswered} subtext="Total completed" />
-        <StatCard label="Current Streak" value={`${currentStreak} Days 🔥`} subtext="Consecutive days active" />
-        <StatCard label="Longest Streak" value={`${longestStreak} Days`} subtext="Personal record" />
-      </div>
+      {/* 2. Top-Level Metric Strip (4 Columns) */}
+      <section className="metrics-strip-grid">
+        <div className="metric-tile">
+          <span className="metric-label">Overall Accuracy</span>
+          <div className="metric-value-row">
+            <span className={`metric-num ${overallAccuracy >= 70 ? 'emerald' : overallAccuracy > 0 ? 'gold' : ''}`}>
+              {overallAccuracy}%
+            </span>
+          </div>
+          <span className="metric-foot">Across all test disciplines</span>
+        </div>
 
-      {/* 2. Category Breakdown */}
-      <div className="dash-section">
-        <h2 className="dash-section-title">Accuracy by Clinical Specialty (Weakest First)</h2>
-        <CategoryBars categories={categoryStats} />
-      </div>
+        <div className="metric-tile">
+          <span className="metric-label">Questions Completed</span>
+          <div className="metric-value-row">
+            <span className="metric-num">{totalAnswered}</span>
+          </div>
+          <span className="metric-foot">Logged in question bank</span>
+        </div>
 
-      {/* 3. Sparkline */}
-      <div className="dash-section">
-        <h2 className="dash-section-title">Score Performance Over Time (Last 10 Quizzes)</h2>
-        <ScoreSparkline attempts={history} />
-      </div>
+        <div className="metric-tile">
+          <span className="metric-label">Current Study Streak</span>
+          <div className="metric-value-row">
+            <span className="metric-num">{currentStreak} <span className="unit">Days</span></span>
+            <span className="streak-flame">🔥</span>
+          </div>
+          <span className="metric-foot">Consecutive days active</span>
+        </div>
 
-      {/* 4. Recent Activity */}
-      <div className="dash-section">
-        <h2 className="dash-section-title">Recent Exam History</h2>
-        <RecentActivity attempts={history} />
+        <div className="metric-tile benchmark-tile">
+          <span className="metric-label">Pass Probability</span>
+          <div className="metric-value-row">
+            <span className={`metric-num ${passingProbability.tier}`}>
+              {passingProbability.pct !== null ? `${passingProbability.pct}%` : '—'}
+            </span>
+          </div>
+          <span className="metric-foot">{passingProbability.label}</span>
+        </div>
+      </section>
+
+      {/* 3. 2-Column Split: Specialty Diagnostic Bars vs. Trend / Readiness */}
+      <div className="analytics-main-grid">
+        {/* Left: Ranked Clinical Specialty Breakdown */}
+        <section className="dashboard-card">
+          <div className="card-heading-bar">
+            <div>
+              <span className="card-kicker">DIAGNOSTIC PROFILING</span>
+              <h2 className="card-title">Accuracy by Clinical Specialty</h2>
+            </div>
+            <span className="card-sub-hint">Weakest Disciplines First</span>
+          </div>
+
+          <div className="specialty-breakdown-list">
+            {sortedCategories.length > 0 ? (
+              sortedCategories.map((item) => (
+                <div key={item.category} className="specialty-row-item">
+                  <div className="row-meta-line">
+                    <span className="row-title">
+                      {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                      <span className="row-counts"> ({item.correct}/{item.total} Qs)</span>
+                    </span>
+                    <div className="row-badge-group">
+                      {item.pct < 65 && <span className="focus-pill">Focus Area</span>}
+                      <span className="row-pct">{item.pct}%</span>
+                    </div>
+                  </div>
+
+                  <div className="specialty-bar-track">
+                    <div
+                      className={`specialty-bar-fill ${
+                        item.pct >= 75 ? 'green' : item.pct >= 60 ? 'gold' : 'crimson'
+                      }`}
+                      style={{ width: `${Math.max(item.pct, 4)}%` }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-diagnostic-box">
+                <p>Complete at least one practice module or simulation to generate specialty diagnostics.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Right: Trend & Recent Attempts */}
+        <section className="dashboard-card">
+          <div className="card-heading-bar">
+            <div>
+              <span className="card-kicker">LONGITUDINAL TRACKING</span>
+              <h2 className="card-title">Recent Exam History</h2>
+            </div>
+            <span className="card-sub-hint">Last {history.length} Sessions</span>
+          </div>
+
+          <div className="history-entries-list">
+            {history.length > 0 ? (
+              history.slice(0, 5).map((attempt, idx) => (
+                <div key={idx} className="history-item-row">
+                  <div className="history-info">
+                    <span className="history-mode-title">{attempt.mode || 'Clinical Session'}</span>
+                    <span className="history-timestamp">
+                      {attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      }) : 'Recent Attempt'} · {attempt.questions?.length || 50} Qs
+                    </span>
+                  </div>
+
+                  <div className="history-score-cluster">
+                    <span
+                      className={`history-score-badge ${
+                        attempt.score >= 75 ? 'pass' : 'fail'
+                      }`}
+                    >
+                      {attempt.score}%
+                    </span>
+                    <Link
+                      to="/review"
+                      state={{
+                        questions: attempt.questions,
+                        userAnswers: attempt.userAnswers,
+                        confidenceLevels: attempt.confidenceLevels
+                      }}
+                      className="history-review-btn"
+                    >
+                      Review →
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="empty-diagnostic-box">
+                <p>No exams logged yet. Launch a test to review your remediations.</p>
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

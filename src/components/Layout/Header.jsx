@@ -1,40 +1,103 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { sounds } from '../../utils/soundEffects.js';
+import { NavLink, Link } from 'react-router-dom';
+import './Header.css';
 
 export default function Header() {
-  const [isMuted, setIsMuted] = useState(sounds.isMuted());
+  const [isMuted, setIsMuted] = useState(false);
 
-  function handleToggleSound() {
-    const updated = sounds.toggleMute();
-    setIsMuted(updated);
-    if (!updated) {
-      sounds.playClick();
-    }
+  function toggleAudio() {
+    setIsMuted((prev) => !prev);
   }
 
   return (
-    <header className="app-header">
-      <Link to="/" style={{ textDecoration: 'none' }}>
-        <h1 className="header-brand">NCLEX Clinical Master</h1>
-      </Link>
-      <nav className="header-nav" style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
-        <button
-          type="button"
-          onClick={handleToggleSound}
-          className="header-dash-link"
-          title={isMuted ? 'Unmute Luxury Audio' : 'Mute Audio'}
-          style={{ cursor: 'pointer', background: 'transparent' }}
+    <>
+      {/* Top Header */}
+      <header className="master-header">
+        <div className="header-container">
+          <Link to="/" className="brand-group">
+            <div className="brand-mark">
+              <span>⚕</span>
+            </div>
+            <div className="brand-titles">
+              <span className="brand-name">
+                NCLEX Clinical <span className="brand-accent">Master</span>
+              </span>
+              <span className="brand-badge">RN Candidate Suite</span>
+            </div>
+          </Link>
+
+          {/* Desktop Nav Links */}
+          <nav className="nav-links-cluster">
+            <NavLink
+              to="/modules"
+              className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}
+            >
+              Modules
+            </NavLink>
+            <NavLink
+              to="/flashcards"
+              className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}
+            >
+              Flashcards
+            </NavLink>
+            <NavLink
+              to="/dashboard"
+              className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}
+            >
+              Analytics
+            </NavLink>
+          </nav>
+
+          {/* Audio Toggle */}
+          <div className="header-right-actions">
+            <button
+              type="button"
+              className={`audio-toggle-btn ${isMuted ? 'muted' : 'active'}`}
+              onClick={toggleAudio}
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              <span className="audio-icon">{isMuted ? '✕' : '🔊'}</span>
+              <span className="audio-label">{isMuted ? 'Muted' : 'Audio On'}</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Bottom Icon Navigator */}
+      <nav className="mobile-bottom-bar" aria-label="Mobile Navigation">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) => `m-nav-item ${isActive ? 'active' : ''}`}
         >
-          {isMuted ? '🔇 Audio Off' : '🔔 Audio On'}
-        </button>
-        <Link to="/modules" className="header-dash-link">
-          📚 Modules
-        </Link>
-        <Link to="/dashboard" className="header-dash-link">
-          📊 Dashboard
-        </Link>
+          <span className="m-icon">🏠</span>
+          <span className="m-label">Home</span>
+        </NavLink>
+
+        <NavLink
+          to="/modules"
+          className={({ isActive }) => `m-nav-item ${isActive ? 'active' : ''}`}
+        >
+          <span className="m-icon">📚</span>
+          <span className="m-label">Modules</span>
+        </NavLink>
+
+        <NavLink
+          to="/flashcards"
+          className={({ isActive }) => `m-nav-item ${isActive ? 'active' : ''}`}
+        >
+          <span className="m-icon">🃏</span>
+          <span className="m-label">Cards</span>
+        </NavLink>
+
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `m-nav-item ${isActive ? 'active' : ''}`}
+        >
+          <span className="m-icon">📊</span>
+          <span className="m-label">Stats</span>
+        </NavLink>
       </nav>
-    </header>
+    </>
   );
 }

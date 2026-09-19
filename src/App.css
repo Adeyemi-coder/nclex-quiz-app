@@ -759,3 +759,173 @@ h1, h2, h3, h4,
     text-align: center;
   }
 }
+
+/* Mode & Audio Controls */
+.top-bar-left,
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.mode-segmented-control {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(212, 175, 122, 0.25);
+  border-radius: 9999px;
+  padding: 0.2rem;
+}
+
+.mode-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-btn.active {
+  background: rgba(212, 175, 122, 0.2);
+  color: #d4af7a;
+}
+
+/* Ambient Audio Focus Toggle */
+.focus-ambient-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.focus-ambient-btn:hover {
+  border-color: #d4af7a;
+  color: #f7f4ed;
+}
+
+.focus-ambient-btn.active {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: #34d399;
+  color: #34d399;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
+}
+
+/* Countdown Clock */
+.countdown-clock {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(14, 20, 36, 0.9);
+  border: 1px solid rgba(212, 175, 122, 0.3);
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-family: 'Space Grotesk', monospace;
+  font-weight: 700;
+  color: #d4af7a;
+  font-size: 0.9rem;
+}
+
+.countdown-clock.critical {
+  border-color: #f87171;
+  color: #f87171;
+  animation: pulseWarning 1.5s infinite;
+}
+
+@keyframes pulseWarning {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* Tutor Mode Instant Feedback Highlighting */
+.answer-btn.tutor-correct {
+  background: rgba(52, 211, 153, 0.15) !important;
+  border-color: #34d399 !important;
+  color: #f7f4ed !important;
+}
+
+.answer-btn.tutor-wrong {
+  background: rgba(248, 113, 113, 0.15) !important;
+  border-color: #f87171 !important;
+  color: #f7f4ed !important;
+}
+
+.tutor-correct-badge {
+  background: #34d399 !important;
+  color: #050814 !important;
+}
+
+.tutor-wrong-badge {
+  background: #f87171 !important;
+  color: #ffffff !important;
+}
+
+/* Tutor Rationale Accordion */
+.tutor-rationale-accordion {
+  margin: 1.25rem 0;
+  background: rgba(14, 20, 36, 0.85);
+  border: 1px solid rgba(212, 175, 122, 0.35);
+  border-radius: 12px;
+  padding: 1.25rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.tutor-rationale-header {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #d4af7a;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.tutor-rationale-body {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Base Root Variables & Canvas Lock */
+:root {
+  --bg-primary: #050814;
+  --bg-surface: #0b1122;
+  --gold-primary: #d4af7a;
+  --gold-glow: rgba(212, 175, 122, 0.25);
+  --text-primary: #f7f4ed;
+  --text-secondary: #94a3b8;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #050814 !important;
+  color: #f7f4ed;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure the app-shell spans full screen and maintains dark canvas */
+.app-shell {
+  min-height: 100vh;
+  background-color: #050814;
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(212, 175, 122, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.05) 0%, transparent 35%),
+    radial-gradient(circle at 50% 85%, rgba(212, 175, 122, 0.04) 0%, transparent 50%);
+  background-attachment: fixed;
+}

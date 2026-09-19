@@ -1,0 +1,53 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
+
+/* Force dark mode color-scheme so browser ignores light OS theme */
+:root {
+  color-scheme: dark !important;
+  --bg-primary: #050814;
+  --bg-surface: #0b1122;
+  --gold-primary: #d4af7a;
+  --gold-glow: rgba(212, 175, 122, 0.25);
+  --text-primary: #f7f4ed;
+  --text-secondary: #94a3b8;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #050814 !important;
+  color: #f7f4ed !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  background-color: #050814 !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Master Obsidian Canvas with Ambient Radial Mesh */
+.app-shell {
+  min-height: 100vh;
+  background-color: #050814 !important;
+  background-image: 
+    radial-gradient(ellipse 70% 50% at 20% 15%, rgba(212, 175, 122, 0.12), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 85% 25%, rgba(56, 189, 248, 0.08), transparent 60%),
+    radial-gradient(ellipse 65% 45% at 50% 85%, rgba(212, 175, 122, 0.06), transparent 70%) !important;
+  background-attachment: fixed !important;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}

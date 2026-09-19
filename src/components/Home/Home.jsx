@@ -7,28 +7,28 @@ import './Home.css';
 
 const FEATURED_MODULES = [
   {
-    id: 'Pharmacology',
+    id: 'pharmacology',
     title: 'Pharmacology & Parenteral Therapies',
     icon: '💊',
     tag: 'High Yield',
     desc: 'High-alert titrations, toxicities, and drug interactions.'
   },
   {
-    id: 'Cardiovascular',
+    id: 'cardiovascular',
     title: 'Cardiovascular Nursing',
     icon: '🫀',
     tag: 'Priority',
     desc: 'Hemodynamic compromise, dysrhythmias, and ACS protocols.'
   },
   {
-    id: 'Emergency Nursing',
+    id: 'emergency',
     title: 'Emergency & Critical Care',
     icon: '🚨',
     tag: 'Essential',
     desc: 'ACLS algorithms, trauma resuscitation, and shock staging.'
   },
   {
-    id: 'Maternal Nursing',
+    id: 'maternal',
     title: 'Maternal & Newborn Health',
     icon: '👶',
     tag: 'Core',
@@ -39,19 +39,24 @@ const FEATURED_MODULES = [
 export default function Home() {
   const navigate = useNavigate();
   const {
-    history,
-    missedCount,
-    bookmarkCount,
-    overallAccuracy,
-    totalAnswered,
-    currentStreak,
-    missedQuestions,
-    bookmarks
+    history = [],
+    missedCount = 0,
+    bookmarkCount = 0,
+    overallAccuracy = 0,
+    totalAnswered = 0,
+    currentStreak = 0,
+    missedQuestions = {},
+    bookmarks = []
   } = useProgress();
 
   function handleReviewMissed() {
-    const missedList = Object.values(missedQuestions).map((m) => m.question);
-    if (missedList.length === 0) return;
+    if (missedCount === 0) return;
+    const safeMissed = missedQuestions || {};
+    const missedList = Object.values(safeMissed)
+      .map((m) => m?.question || m)
+      .filter(Boolean);
+
+    if (!missedList.length) return;
     navigate('/review', {
       state: {
         questions: missedList,
@@ -61,8 +66,11 @@ export default function Home() {
   }
 
   function handleReviewBookmarked() {
-    const bookmarkedList = questions.filter((q) => bookmarks.includes(q.id));
-    if (bookmarkedList.length === 0) return;
+    if (bookmarkCount === 0) return;
+    const safeBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
+    const bookmarkedList = (questions || []).filter((q) => safeBookmarks.includes(q.id));
+
+    if (!bookmarkedList.length) return;
     navigate('/review', {
       state: {
         questions: bookmarkedList,
@@ -75,12 +83,12 @@ export default function Home() {
 
   return (
     <div className="home-command-container">
-      {/* 1. Hero Command Section with 3D Holographic Portrait */}
+      {/* 1. Hero Section (Borderless & Expansive) */}
       <section className="home-hero-section">
         <div className="home-hero-content">
           <div className="hero-streak-pill">
-            <span>🔥</span>
-            <span>{currentStreak} Day Study Streak</span>
+            <span className="flame-icon">🔥</span>
+            <span>{currentStreak} DAY STUDY STREAK</span>
           </div>
 
           <h1 className="home-hero-title">
@@ -92,7 +100,7 @@ export default function Home() {
           </p>
 
           <div className="home-hero-cta-group">
-            <Link to="/cat-simulator" className="primary-hero-btn">
+            <Link to="/quiz" className="primary-hero-btn">
               ⚡ Start CAT Simulation (85–150 Qs)
             </Link>
             <Link to="/modules" className="secondary-hero-btn">
@@ -100,37 +108,32 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Quick Metrics Bar */}
+          {/* Clean Horizontal Metrics Bar */}
           <div className="home-inline-stats">
             <div className="inline-stat-item">
               <span className="inline-stat-label">Clinical Accuracy</span>
-              <span className="inline-stat-val">{overallAccuracy}%</span>
+              <span className="inline-stat-val gold">{overallAccuracy}%</span>
             </div>
             <div className="inline-stat-divider" />
             <div className="inline-stat-item">
               <span className="inline-stat-label">Questions Logged</span>
               <span className="inline-stat-val">{totalAnswered}</span>
             </div>
-            {latestAttempt && (
-              <>
-                <div className="inline-stat-divider" />
-                <div className="inline-stat-item">
-                  <span className="inline-stat-label">Recent Test</span>
-                  <span
-                    className="inline-stat-val"
-                    style={{
-                      color: latestAttempt.score >= 75 ? 'var(--emerald-teal)' : 'var(--crimson-garnet)',
-                    }}
-                  >
-                    {latestAttempt.score}%
-                  </span>
-                </div>
-              </>
-            )}
+            <div className="inline-stat-divider" />
+            <div className="inline-stat-item">
+              <span className="inline-stat-label">Recent Test</span>
+              <span
+                className={`inline-stat-val ${
+                  latestAttempt?.score >= 75 ? 'emerald' : 'garnet'
+                }`}
+              >
+                {latestAttempt ? `${latestAttempt.score}%` : '—'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* 3D Holographic Portrait Card */}
+        {/* Hero Visual Card */}
         <div className="home-hero-visual">
           <HoloPortrait
             caption="Built by Adeyemi Kehinde, RN Candidate"
@@ -143,45 +146,49 @@ export default function Home() {
 
       {/* 2. Diagnostic & Remediation Cards */}
       <section className="home-quick-actions-section">
-        <span className="section-label">Remediation &amp; Diagnostics</span>
+        <span className="section-label">REMEDIATION &amp; DIAGNOSTICS</span>
 
         <div className="quick-access-banner-grid">
           {/* Missed Questions */}
           <div
-            className={`quick-card ${missedCount > 0 ? 'active' : 'disabled'}`}
+            className={`quick-card ${missedCount > 0 ? 'active' : 'idle'}`}
             onClick={handleReviewMissed}
             role="button"
             tabIndex={0}
           >
             <div className="quick-card-left">
-              <span className="quick-icon">⚠️</span>
+              <span className="quick-icon">{missedCount > 0 ? '⚠️' : '✓'}</span>
               <div>
                 <div className="quick-title">Review Missed Items</div>
                 <div className="quick-count">
-                  {missedCount > 0 ? `${missedCount} Questions to Remediate` : 'No Missed Items'}
+                  {missedCount > 0
+                    ? `${missedCount} Questions to Remediate`
+                    : 'All Clear · No Missed Items'}
                 </div>
               </div>
             </div>
-            <span className="quick-arrow">→</span>
+            {missedCount > 0 && <span className="quick-arrow">→</span>}
           </div>
 
           {/* Bookmarks */}
           <div
-            className={`quick-card ${bookmarkCount > 0 ? 'active' : 'disabled'}`}
+            className={`quick-card ${bookmarkCount > 0 ? 'active' : 'idle'}`}
             onClick={handleReviewBookmarked}
             role="button"
             tabIndex={0}
           >
             <div className="quick-card-left">
-              <span className="quick-icon">★</span>
+              <span className="quick-icon">{bookmarkCount > 0 ? '★' : '☆'}</span>
               <div>
                 <div className="quick-title">Bookmarked Questions</div>
                 <div className="quick-count">
-                  {bookmarkCount > 0 ? `${bookmarkCount} Questions Saved` : '0 Saved Questions'}
+                  {bookmarkCount > 0
+                    ? `${bookmarkCount} Questions Saved`
+                    : '0 Questions Saved'}
                 </div>
               </div>
             </div>
-            <span className="quick-arrow">→</span>
+            {bookmarkCount > 0 && <span className="quick-arrow">→</span>}
           </div>
 
           {/* Dashboard Shortcut */}
@@ -202,18 +209,18 @@ export default function Home() {
       <section className="home-featured-section">
         <div className="section-header-row">
           <div>
-            <span className="section-label">High-Yield Specialties</span>
+            <span className="section-label">HIGH-YIELD SPECIALTIES</span>
             <h2 className="section-subheading">Jump straight into core clinical modules</h2>
           </div>
           <Link to="/modules" className="view-all-link">
-            View All 11 Modules ({questions.length} Questions) →
+            View All 11 Modules ({(questions || []).length} Questions) →
           </Link>
         </div>
 
         <div className="featured-modules-grid">
           {FEATURED_MODULES.map((item) => (
             <div key={item.id} className="featured-module-card">
-              <div>
+              <div className="feat-body">
                 <div className="feat-header">
                   <span className="feat-icon">{item.icon}</span>
                   <span className="feat-tag">{item.tag}</span>

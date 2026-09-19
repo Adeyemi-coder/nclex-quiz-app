@@ -1,0 +1,415 @@
+/* ==========================================================
+   NCLEX CLINICAL MASTER - 3D MEDICAL TECH SPLASH
+   Timeline:
+   0.0s - 1.0s: Scale & Fade-in entrance
+   1.0s - 2.5s: 3D levitation, ECG draw & gentle tilt
+   2.5s - 3.0s: Master cinematic fade-out
+   ========================================================== */
+
+.clinical-splash-viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background-color: #030712;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  pointer-events: none;
+  perspective: 1200px;
+  opacity: 1;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clinical-splash-viewport.splash-exit {
+  opacity: 0;
+}
+
+/* Background Atmosphere */
+.splash-ambient-mesh {
+  position: absolute;
+  inset: -100px;
+  background: 
+    radial-gradient(ellipse 60% 50% at 50% 45%, rgba(14, 116, 144, 0.18) 0%, transparent 70%),
+    radial-gradient(circle at 50% 50%, rgba(2, 6, 23, 0.95) 0%, #030712 100%);
+  z-index: 1;
+}
+
+.splash-radial-light {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, rgba(3, 7, 18, 0) 65%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  z-index: 2;
+  filter: blur(40px);
+}
+
+/* 3D Stage Container */
+.splash-stage-3d {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  animation: stageEntrance 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes stageEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Floating Depth Micro-Particles */
+.splash-depth-particles {
+  position: absolute;
+  inset: -80px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.particle {
+  position: absolute;
+  font-family: 'Space Grotesk', monospace;
+  font-weight: 700;
+  color: rgba(56, 189, 248, 0.35);
+  animation: particleFloat 3s ease-in-out infinite alternate;
+}
+
+.p-1 { top: 12%; left: 10%; font-size: 1.1rem; animation-delay: 0.1s; }
+.p-2 { top: 22%; right: 14%; font-size: 0.75rem; color: rgba(255, 255, 255, 0.3); animation-delay: 0.4s; }
+.p-3 { bottom: 35%; left: 8%; font-size: 0.9rem; color: rgba(34, 211, 238, 0.4); animation-delay: 0.2s; }
+.p-4 { bottom: 28%; right: 10%; font-size: 0.8rem; animation-delay: 0.6s; }
+.p-5 { top: 5%; right: 35%; font-size: 0.85rem; color: rgba(255, 255, 255, 0.2); animation-delay: 0.3s; }
+
+@keyframes particleFloat {
+  0% { transform: translateY(0) scale(0.95); opacity: 0.4; }
+  100% { transform: translateY(-10px) scale(1.05); opacity: 0.9; }
+}
+
+/* Orbiting Clinical Props */
+.floating-elements-orbit {
+  position: absolute;
+  width: 320px;
+  height: 220px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -65%);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.orbit-item {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.12);
+}
+
+.dna-glyph {
+  top: 0;
+  left: -10px;
+  animation: floatLeftItem 2.8s ease-in-out infinite alternate;
+}
+
+.steth-glyph {
+  bottom: 18px;
+  right: -10px;
+  animation: floatRightItem 2.8s ease-in-out infinite alternate;
+}
+
+.dna-svg, .steth-svg {
+  width: 26px;
+  height: 26px;
+}
+
+@keyframes floatLeftItem {
+  0% { transform: translate3d(0, 0, 10px) rotate(-4deg); }
+  100% { transform: translate3d(6px, -12px, 30px) rotate(4deg); }
+}
+
+@keyframes floatRightItem {
+  0% { transform: translate3d(0, 0, 15px) rotate(3deg); }
+  100% { transform: translate3d(-6px, -10px, 35px) rotate(-3deg); }
+}
+
+/* Central 3D Monolith Anchor */
+.medical-monolith-anchor {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  animation: floatMonolith 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes floatMonolith {
+  0% {
+    transform: rotateX(8deg) rotateY(-8deg) translateY(0);
+  }
+  100% {
+    transform: rotateX(4deg) rotateY(8deg) translateY(-8px);
+  }
+}
+
+/* Glass Monolith Slab & Prismatic Borders */
+.glass-monolith-slab {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  transform-style: preserve-3d;
+}
+
+.slab-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: 
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(15, 23, 42, 0.7) 45%, rgba(8, 14, 28, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-top-color: rgba(255, 255, 255, 0.45);
+  border-left-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 
+    0 24px 48px -8px rgba(0, 0, 0, 0.8),
+    0 0 35px rgba(56, 189, 248, 0.18),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* 3D Extrusion Shadow Behind Face */
+.slab-extrusion-depth {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: rgba(2, 6, 23, 0.8);
+  transform: translateZ(-16px);
+  filter: blur(4px);
+}
+
+/* Beveled Medical Plus Geometry */
+.cross-geometry {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  z-index: 3;
+}
+
+.cross-beam {
+  position: absolute;
+  background: linear-gradient(145deg, #ffffff 0%, #e2e8f0 40%, #94a3b8 100%);
+  border-radius: 6px;
+  box-shadow: 
+    0 4px 14px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(255, 255, 255, 0.45);
+}
+
+.cross-beam.vertical {
+  width: 18px;
+  height: 58px;
+  left: 20px;
+  top: 0;
+}
+
+.cross-beam.horizontal {
+  width: 58px;
+  height: 18px;
+  left: 0;
+  top: 20px;
+}
+
+/* ECG Rhythm Scan Line Across Cross */
+.ecg-track-frame {
+  position: absolute;
+  width: 160%;
+  height: 50px;
+  left: -30%;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.ecg-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ecg-pulse-shadow {
+  fill: none;
+  stroke: rgba(6, 182, 212, 0.45);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.9));
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: drawECG 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.ecg-pulse-laser {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 260;
+  stroke-dashoffset: 260;
+  animation: drawECG 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes drawECG {
+  0% {
+    stroke-dashoffset: 260;
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -260;
+    opacity: 0.1;
+  }
+}
+
+/* Glass Specular Sheen */
+.slab-lens-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+/* Monolith Ground Shadow */
+.monolith-pedestal-shadow {
+  position: absolute;
+  bottom: -18px;
+  width: 110px;
+  height: 18px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.8) 0%, rgba(3, 7, 18, 0) 70%);
+  border-radius: 50%;
+  filter: blur(6px);
+  transform: translateZ(-25px);
+}
+
+/* Typographic Lockup */
+.splash-brand-lockup {
+  text-align: center;
+  max-width: 580px;
+  padding: 0 1rem;
+}
+
+.splash-app-title {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+}
+
+.title-emphasis {
+  background: linear-gradient(135deg, #ffffff 0%, #bae6fd 50%, #38bdf8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.splash-tagline {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  margin: 0;
+  text-transform: uppercase;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+}
+
+/* Mobile Viewport Sizing */
+@media (max-width: 640px) {
+  .splash-app-title {
+    font-size: 1.95rem;
+  }
+  .splash-tagline {
+    font-size: 0.76rem;
+    letter-spacing: 0.04em;
+  }
+  .floating-elements-orbit {
+    width: 270px;
+  }
+  .medical-monolith-anchor {
+    width: 140px;
+    height: 140px;
+    margin-bottom: 1.5rem;
+  }
+  .glass-monolith-slab {
+    width: 110px;
+    height: 110px;
+  }
+  .cross-geometry {
+    width: 48px;
+    height: 48px;
+  }
+  .cross-beam.vertical {
+    width: 14px;
+    height: 48px;
+    left: 17px;
+  }
+  .cross-beam.horizontal {
+    width: 48px;
+    height: 14px;
+    top: 17px;
+  }
+}
+
+.clinical-splash-viewport {
+  position: fixed;
+  inset: 0;
+  z-index: 9999999; /* Ensure it floats above every navigation layer */
+  background-color: #030712;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  perspective: 1200px;
+  opacity: 1;
+  transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clinical-splash-viewport.splash-exit {
+  opacity: 0;
+  pointer-events: none;
+}
