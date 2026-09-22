@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Loader2, X, AlertTriangle, Key } from 'lucide-react';
+import { Sparkles, Loader2, X, AlertTriangle, Key, CheckCircle2 } from 'lucide-react';
 import { generateClientSideQuestions } from '../../services/aiExamFrontend.js';
 
 export default function AIExamModal({ isOpen, onClose }) {
@@ -11,9 +11,18 @@ export default function AIExamModal({ isOpen, onClose }) {
   const [format, setFormat] = useState('mixed');
   const [error, setError] = useState(null);
 
-  const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem('nclex_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || ''
-  );
+  // Read saved key from localStorage or Vite environment variable
+  const [apiKey, setApiKey] = useState('');
+  const [showKeyInput, setShowKeyInput] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('nclex_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+    setApiKey(saved);
+    // If no key is saved yet, open the input box by default
+    if (!saved) {
+      setShowKeyInput(true);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -21,14 +30,16 @@ export default function AIExamModal({ isOpen, onClose }) {
     setLoading(true);
     setError(null);
 
-    const activeKey = apiKey.trim();
+    const activeKey = apiKey.trim() || localStorage.getItem('nclex_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY;
 
     if (!activeKey) {
-      setError('Please provide a Gemini API Key to proceed.');
+      setShowKeyInput(true);
+      setError('Please enter your Gemini API Key to proceed.');
       setLoading(false);
       return;
     }
 
+    // Persist permanently in localStorage
     localStorage.setItem('nclex_gemini_key', activeKey);
 
     try {
@@ -67,6 +78,7 @@ export default function AIExamModal({ isOpen, onClose }) {
         className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1D2A59] text-white">
@@ -94,19 +106,47 @@ export default function AIExamModal({ isOpen, onClose }) {
         )}
 
         <div className="mt-5 space-y-4">
-          <div>
-            <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-600">
-              <Key className="h-3 w-3 text-cyan-700" />
-              <span>Gemini API Key</span>
-            </label>
-            <input
-              type="password"
-              placeholder="Paste your AIzaSy... key here"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 placeholder-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none"
-            />
-          </div>
+          {/* Key Status / Input Accordion */}
+          {apiKey && !showKeyInput ? (
+            <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/60 px-3.5 py-2.5">
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-800">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span>Gemini API Key Connected</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowKeyInput(true)}
+                className="text-[11px] font-bold text-emerald-700 underline hover:text-emerald-900"
+              >
+                Change Key
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                  <Key className="h-3 w-3 text-cyan-700" />
+                  <span>Gemini API Key</span>
+                </label>
+                {apiKey && (
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyInput(false)}
+                    className="text-[11px] text-slate-500 hover:underline"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+              <input
+                type="password"
+                placeholder="AIzaSy..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-800 placeholder-slate-400 focus:border-slate-900 focus:bg-white focus:outline-none"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-600">

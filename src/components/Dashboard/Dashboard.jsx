@@ -5,8 +5,8 @@ import {
   Award, 
   RotateCcw, 
   Flame, 
-  CheckCircle2, 
-  Sparkles
+  Sparkles,
+  Sliders
 } from 'lucide-react';
 import WeakAreasBanner from './WeakAreasBanner.jsx';
 import CategoryBars from './CategoryBars.jsx';
@@ -14,12 +14,14 @@ import ScoreSparkline from './ScoreSparkline.jsx';
 import HoloPortrait from './HoloPortrait.jsx';
 import CertificateModal from '../Result/CertificateModal.jsx';
 import AIExamModal from '../Quiz/AIExamModal.jsx';
+import ExamConfigModal from '../Quiz/ExamConfigModal.jsx';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
   const [showCertificate, setShowCertificate] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Load telemetry from localStorage
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[#F8FAFC] py-10 px-4 sm:px-6 lg:px-8 text-slate-900">
       <div className="mx-auto max-w-6xl space-y-8">
         
-        {/* 1. Header Profile & Status Strip */}
+        {/* 1. Header Profile & Action Strip */}
         <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-8">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1D2A59] text-white shadow-xs">
@@ -102,7 +104,7 @@ export default function Dashboard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* AI Generator Trigger */}
+            {/* AI Generator Modal Trigger */}
             <button
               type="button"
               onClick={() => setShowAIModal(true)}
@@ -112,7 +114,7 @@ export default function Dashboard() {
               <span>AI Custom Drill</span>
             </button>
 
-            {/* Official Credential Button */}
+            {/* Official Credential Modal Trigger */}
             {metrics.isPassing && metrics.totalItems >= 50 && (
               <button
                 type="button"
@@ -124,19 +126,19 @@ export default function Dashboard() {
               </button>
             )}
 
-            {/* Static Exam Trigger */}
+            {/* Calibrated Exam Configuration Modal Trigger */}
             <button
               type="button"
-              onClick={() => navigate('/quiz')}
+              onClick={() => setShowConfigModal(true)}
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#1D2A59] px-5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition-colors hover:bg-[#283A78]"
             >
-              <RotateCcw className="h-4 w-4" />
-              <span>Standard CAT</span>
+              <Sliders className="h-4 w-4 text-cyan-400" />
+              <span>Launch CAT Exam</span>
             </button>
           </div>
         </header>
 
-        {/* 2. Top-Level Metric Tiles */}
+        {/* 2. Top-Level Metric Summary Tiles */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
@@ -195,10 +197,10 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* 3. Adaptive Remediation Trigger */}
+        {/* 3. Adaptive Weak Areas Calibration Banner */}
         <WeakAreasBanner />
 
-        {/* 4. Telemetry Graph & Candidate Credential Column */}
+        {/* 4. Analytics Grid & Holographic Card Column */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-start">
           <div className="lg:col-span-8 space-y-8">
             <ScoreSparkline attempts={history} />
@@ -212,7 +214,7 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Official Certificate Modal */}
+      {/* Official Certificate Credential Modal */}
       {showCertificate && (
         <CertificateModal
           score={metrics.accuracy}
@@ -225,6 +227,13 @@ export default function Dashboard() {
       <AIExamModal
         isOpen={showAIModal}
         onClose={() => setShowAIModal(false)}
+      />
+
+      {/* Exam Configuration Parameters Modal */}
+      <ExamConfigModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+        defaultCategory="all"
       />
     </div>
   );

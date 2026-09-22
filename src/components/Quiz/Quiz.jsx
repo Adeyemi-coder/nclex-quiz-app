@@ -23,34 +23,51 @@ export default function Quiz() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Dynamic Question Set Selection (Custom Remediation Set vs Category vs Full Bank)
+  const config = location.state?.config;
+
+  // 1. Question Set Slicing (AI Dynamic Set vs Config Parameters vs Static Bank)
   const activeQuestions = useMemo(() => {
     if (location.state?.customQuestions?.length > 0) {
       return location.state.customQuestions;
     }
-    if (!category || category.toLowerCase() === 'all') {
-      const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, 85);
-    }
-    const filtered = allQuestions.filter(
-      (q) => q.category?.toLowerCase() === category.toLowerCase()
-    );
-    return filtered.length > 0 ? filtered : allQuestions.slice(0, 50);
-  }, [category, location.state]);
 
-  // 2. Exam State Tracking
+    const pool = (!category || category.toLowerCase() === 'all')
+      ? [...allQuestions]
+      : allQuestions.filter((q) => q.category?.toLowerCase() === category.toLowerCase());
+
+    const fallbackPool = pool.length > 0 ? pool : allQuestions;
+    const shuffled = [...fallbackPool].sort(() => 0.5 - Math.random());
+    const count = config?.itemCount || 85;
+
+    return shuffled.slice(0, count);
+  }, [category, location.state, config]);
+
+  // 2. Exam States
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
   const [savedItems, setSavedItems] = useState([]);
-  const [examMode, setExamMode] = useState('tutor'); // 'tutor' | 'timed'
+  const [examMode, setExamMode] = useState(config?.examMode || 'tutor');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(() => activeQuestions.length * 72);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const cadence = config?.secondsPerQuestion || 72;
+    return activeQuestions.length * cadence;
+  });
   const [struckOptions, setStruckOptions] = useState({});
   const [showNavigator, setShowNavigator] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
 
-  // 3. Current Question Schema & SATA Normalization
+  // Sync mode and timer if config arrives dynamically
+  useEffect(() => {
+    if (config?.examMode) {
+      setExamMode(config.examMode);
+    }
+    if (config?.secondsPerQuestion && activeQuestions.length > 0) {
+      setTimeLeft(activeQuestions.length * config.secondsPerQuestion);
+    }
+  }, [config, activeQuestions]);
+
+  // 3. Question Schema & SATA Logic
   const currentQ = activeQuestions[currentIdx] || {};
   const questionOptions = useMemo(() => {
     return currentQ.options || currentQ.choices || currentQ.answers || [];
@@ -95,7 +112,7 @@ export default function Quiz() {
     return currentAnswer === correctOptionIndices[0];
   }, [hasAnswered, isSATA, currentAnswer, correctOptionIndices]);
 
-  // 4. Timer Logic
+  // 4. Timer Countdown
   useEffect(() => {
     if (examMode === 'timed' && !isSubmitted && !isPaused) {
       const timer = setInterval(() => {
@@ -125,12 +142,12 @@ export default function Quiz() {
 
       setUserAnswers((prev) => ({
         ...prev,
-        [currentIdx]: updated
+        [currentIdx]: updated,
       }));
     } else {
       setUserAnswers((prev) => ({
         ...prev,
-        [currentIdx]: optionIndex
+        [currentIdx]: optionIndex,
       }));
     }
   }
@@ -154,7 +171,7 @@ export default function Quiz() {
     );
   }
 
-  // 5. Final Submission -> Evaluates NGN Standard & Routes to /result
+  // 5. Final Submission Handler & Score Telemetry
   function handleFinalSubmit() {
     setIsSubmitted(true);
 
@@ -188,7 +205,7 @@ export default function Quiz() {
             itemIndex: idx + 1,
             selectedAnswer: selected,
             correctAnswerIndex: correctList,
-            isSATA: true
+            isSATA: true,
           });
         }
       } else {
@@ -200,13 +217,17 @@ export default function Quiz() {
             itemIndex: idx + 1,
             selectedAnswer: userSelected,
             correctAnswerIndex: correctList[0],
-            isSATA: false
+            isSATA: false,
           });
         }
       }
     });
 
-    const sessionCategory = location.state?.categoryTitle || category || 'Comprehensive CAT Simulation';
+    const sessionCategory =
+      config?.categoryTitle ||
+      location.state?.categoryTitle ||
+      category ||
+      'Comprehensive Licensure Simulation';
 
     const historyRecord = {
       id: Date.now(),
@@ -214,14 +235,14 @@ export default function Quiz() {
       category: sessionCategory,
       score: calculatedScore,
       total: activeQuestions.length,
-      mode: examMode
+      mode: examMode,
     };
 
     try {
       const existing = JSON.parse(localStorage.getItem('nclex_quiz_history') || '[]');
       localStorage.setItem('nclex_quiz_history', JSON.stringify([historyRecord, ...existing]));
     } catch (e) {
-      console.error('Failed to update quiz history in localStorage:', e);
+      console.error('Failed to save session history:', e);
     }
 
     navigate('/result', {
@@ -232,8 +253,8 @@ export default function Quiz() {
         mode: examMode,
         missedQuestions: missedQuestionsList,
         questions: activeQuestions,
-        userAnswers: userAnswers
-      }
+        userAnswers: userAnswers,
+      },
     });
   }
 
@@ -247,7 +268,7 @@ export default function Quiz() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
         <AlertCircle className="mx-auto h-8 w-8 text-[#62697A]" strokeWidth={1.8} />
-        <h2 className="mt-3 text-sm font-semibold text-[#202535]">No questions available for this module</h2>
+        <h2 className="mt-3 text-sm font-semibold text-[#202535]">No clinical questions available for this module</h2>
       </div>
     );
   }
@@ -255,17 +276,17 @@ export default function Quiz() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       
-      {/* 1. Subtle Telemetry & Tools Bar */}
+      {/* Top Telemetry & Tools Bar */}
       <div className="mb-8 flex items-center justify-between border-b border-[#DDD9CC] pb-4">
         
-        {/* Left: Item Counter & Category */}
+        {/* Left: Counter & Domain */}
         <div className="flex items-center gap-3">
           <span className="font-mono text-xs font-bold tracking-wider text-[#1D2A59]">
             ITEM {currentIdx + 1} OF {activeQuestions.length}
           </span>
           <span className="text-[#DDD9CC]">•</span>
           <span className="text-xs font-medium text-[#62697A]">
-            {location.state?.categoryTitle || currentQ.category || 'Clinical Adaptation'}
+            {config?.categoryTitle || location.state?.categoryTitle || currentQ.category || 'Licensure Simulation'}
           </span>
         </div>
 
@@ -341,18 +362,18 @@ export default function Quiz() {
         </div>
       </div>
 
-      {/* 2. Critical Pacing Warning Banner (< 5 min remaining) */}
+      {/* Pacing Banner (< 5 min remaining in timed mode) */}
       <TimeWarningBanner
         timeLeft={timeLeft}
         isVisible={examMode === 'timed' && timeLeft <= 300 && !warningDismissed && !isSubmitted}
         onDismiss={() => setWarningDismissed(true)}
       />
 
-      {/* 3. Clinical Workspace */}
+      {/* Main Clinical Question Workspace */}
       <main>
         <div className="flex items-center justify-between text-xs text-[#62697A]">
           <span className="font-semibold uppercase tracking-wider text-[#283A78]">
-            NCSBN Clinical Judgment • {currentQ.subCategory || 'Prioritize Hypotheses'}
+            NCSBN Clinical Judgment • {currentQ.subCategory || 'Clinical Decision'}
           </span>
           <span className={`font-semibold ${isSATA ? 'text-[#B89A5A]' : 'text-slate-500'}`}>
             {isSATA ? 'Select All That Apply (Multi-Response)' : 'Single Best Response'}
@@ -360,7 +381,7 @@ export default function Quiz() {
         </div>
 
         <h1 className="mt-4 text-lg font-medium leading-relaxed tracking-tight text-[#202535] sm:text-xl">
-          {currentQ.question || currentQ.stem || 'Scenario details currently unavailable.'}
+          {currentQ.question || currentQ.stem || 'Vignette stem details unavailable.'}
         </h1>
 
         {isSATA && (
@@ -369,7 +390,7 @@ export default function Quiz() {
           </p>
         )}
 
-        {/* 4. Options List */}
+        {/* Option Selection List */}
         <div className="mt-6 space-y-3">
           {questionOptions.map((option, idx) => {
             const letter = String.fromCharCode(65 + idx);
@@ -436,7 +457,7 @@ export default function Quiz() {
           })}
         </div>
 
-        {/* 5. Tutor Mode Rationale Drawer */}
+        {/* Tutor Rationale Drawer */}
         {examMode === 'tutor' && hasAnswered && (
           <div className="mt-8 rounded border border-[#DDD9CC] bg-[#FBF8EF] p-5">
             <div className="flex items-center gap-2">
@@ -459,12 +480,12 @@ export default function Quiz() {
 
             <p className="mt-3 text-sm leading-relaxed text-[#202535]">
               <strong className="font-semibold text-[#1D2A59]">Rationale: </strong>
-              {currentQ.rationale || currentQ.explanation || 'Assess ABCs, monitor vital signs, and initiate emergency protocols according to clinical guidelines.'}
+              {currentQ.rationale || currentQ.explanation || 'Assess patient vitals, verify contraindications, and intervene according to established clinical nursing protocols.'}
             </p>
           </div>
         )}
 
-        {/* 6. Navigation Controls */}
+        {/* Bottom Pagination & Finish Button */}
         <div className="mt-10 flex items-center justify-between border-t border-[#DDD9CC] pt-6">
           <button
             type="button"
@@ -497,7 +518,7 @@ export default function Quiz() {
         </div>
       </main>
 
-      {/* 7. Question Navigator Modal */}
+      {/* Question Matrix Navigator Modal */}
       <QuestionNavigatorModal
         isOpen={showNavigator}
         onClose={() => setShowNavigator(false)}
@@ -508,7 +529,7 @@ export default function Quiz() {
         onSelectQuestion={(idx) => setCurrentIdx(idx)}
       />
 
-      {/* 8. Pause Simulation Modal */}
+      {/* Session Pause Modal */}
       <PauseExamModal
         isOpen={isPaused}
         onResume={() => setIsPaused(false)}
