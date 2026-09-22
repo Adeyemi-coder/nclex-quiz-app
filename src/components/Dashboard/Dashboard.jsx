@@ -1,202 +1,231 @@
-import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useProgress } from '../../hooks/useProgress.js';
-import './Dashboard.css';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  ShieldCheck, 
+  Award, 
+  RotateCcw, 
+  Flame, 
+  CheckCircle2, 
+  Sparkles
+} from 'lucide-react';
+import WeakAreasBanner from './WeakAreasBanner.jsx';
+import CategoryBars from './CategoryBars.jsx';
+import ScoreSparkline from './ScoreSparkline.jsx';
+import HoloPortrait from './HoloPortrait.jsx';
+import CertificateModal from '../Result/CertificateModal.jsx';
+import AIExamModal from '../Quiz/AIExamModal.jsx';
 
 export default function Dashboard() {
-  const {
-    history = [],
-    overallAccuracy = 0,
-    totalAnswered = 0,
-    currentStreak = 0,
-    longestStreak = 0,
-    categoryStats = {},
-    resetProgress,
-  } = useProgress();
+  const navigate = useNavigate();
+  const [history, setHistory] = useState([]);
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
 
-  // Passing probability benchmark calculation
-  const passingProbability = useMemo(() => {
-    if (totalAnswered < 20) return { label: 'Calibrating...', pct: null, tier: 'calibrating' };
-    if (overallAccuracy >= 75) return { label: 'High Pass Likelihood', pct: 94, tier: 'high' };
-    if (overallAccuracy >= 65) return { label: 'Moderate Pass Likelihood', pct: 72, tier: 'moderate' };
-    return { label: 'Remediation Required', pct: 38, tier: 'low' };
-  }, [overallAccuracy, totalAnswered]);
+  // Load telemetry from localStorage
+  useEffect(() => {
+    try {
+      const records = JSON.parse(localStorage.getItem('nclex_quiz_history') || '[]');
+      setHistory(records);
+    } catch (e) {
+      console.error('Failed to load session history:', e);
+      setHistory([]);
+    }
+  }, []);
 
-  // Ranked specialties by weakness
-  const sortedCategories = useMemo(() => {
-    const entries = Object.entries(categoryStats || {});
-    return entries.map(([cat, stats]) => {
-      const total = stats.total || 0;
-      const correct = stats.correct || 0;
-      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-      return { category: cat, total, correct, pct };
-    }).sort((a, b) => a.pct - b.pct);
-  }, [categoryStats]);
+  // Compute aggregate statistics
+  const metrics = useMemo(() => {
+    let totalItems = 0;
+    let totalScore = 0;
+
+    history.forEach((rec) => {
+      totalItems += Number(rec.total) || 0;
+      totalScore += Number(rec.score) || 0;
+    });
+
+    const accuracy = totalItems > 0 ? Math.round((totalScore / totalItems) * 100) : 0;
+    const isPassing = accuracy >= 65;
+
+    return {
+      totalItems,
+      totalScore,
+      accuracy,
+      isPassing,
+      totalSessions: history.length
+    };
+  }, [history]);
+
+  // Aggregate accuracy per clinical category
+  const categoryBreakdown = useMemo(() => {
+    const map = {};
+
+    history.forEach((rec) => {
+      const cat = rec.category || 'General Clinical Practice';
+      if (!map[cat]) {
+        map[cat] = { correct: 0, total: 0 };
+      }
+      map[cat].correct += Number(rec.score) || 0;
+      map[cat].total += Number(rec.total) || 0;
+    });
+
+    return Object.entries(map).map(([name, data]) => ({
+      name,
+      correct: data.correct,
+      total: data.total,
+      accuracy: data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0
+    }));
+  }, [history]);
 
   return (
-    <div className="analytics-page-container">
-      {/* 1. Header & Actions */}
-      <header className="analytics-header">
-        <div>
-          <span className="analytics-kicker">CANDIDATE DIAGNOSTIC INTELLIGENCE</span>
-          <h1 className="analytics-title">Performance Analytics</h1>
-        </div>
-        <div className="analytics-header-actions">
-          <button
-            type="button"
-            className="reset-data-btn"
-            onClick={() => {
-              if (window.confirm('Reset all tracked test attempts and streak history?')) {
-                resetProgress?.();
-              }
-            }}
-          >
-            Reset All Data
-          </button>
-        </div>
-      </header>
-
-      {/* 2. Top-Level Metric Strip (4 Columns) */}
-      <section className="metrics-strip-grid">
-        <div className="metric-tile">
-          <span className="metric-label">Overall Accuracy</span>
-          <div className="metric-value-row">
-            <span className={`metric-num ${overallAccuracy >= 70 ? 'emerald' : overallAccuracy > 0 ? 'gold' : ''}`}>
-              {overallAccuracy}%
-            </span>
-          </div>
-          <span className="metric-foot">Across all test disciplines</span>
-        </div>
-
-        <div className="metric-tile">
-          <span className="metric-label">Questions Completed</span>
-          <div className="metric-value-row">
-            <span className="metric-num">{totalAnswered}</span>
-          </div>
-          <span className="metric-foot">Logged in question bank</span>
-        </div>
-
-        <div className="metric-tile">
-          <span className="metric-label">Current Study Streak</span>
-          <div className="metric-value-row">
-            <span className="metric-num">{currentStreak} <span className="unit">Days</span></span>
-            <span className="streak-flame">🔥</span>
-          </div>
-          <span className="metric-foot">Consecutive days active</span>
-        </div>
-
-        <div className="metric-tile benchmark-tile">
-          <span className="metric-label">Pass Probability</span>
-          <div className="metric-value-row">
-            <span className={`metric-num ${passingProbability.tier}`}>
-              {passingProbability.pct !== null ? `${passingProbability.pct}%` : '—'}
-            </span>
-          </div>
-          <span className="metric-foot">{passingProbability.label}</span>
-        </div>
-      </section>
-
-      {/* 3. 2-Column Split: Specialty Diagnostic Bars vs. Trend / Readiness */}
-      <div className="analytics-main-grid">
-        {/* Left: Ranked Clinical Specialty Breakdown */}
-        <section className="dashboard-card">
-          <div className="card-heading-bar">
-            <div>
-              <span className="card-kicker">DIAGNOSTIC PROFILING</span>
-              <h2 className="card-title">Accuracy by Clinical Specialty</h2>
+    <div className="min-h-screen bg-[#F8FAFC] py-10 px-4 sm:px-6 lg:px-8 text-slate-900">
+      <div className="mx-auto max-w-6xl space-y-8">
+        
+        {/* 1. Header Profile & Status Strip */}
+        <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#1D2A59] text-white shadow-xs">
+              <ShieldCheck className="h-6 w-6 text-cyan-400" strokeWidth={2} />
             </div>
-            <span className="card-sub-hint">Weakest Disciplines First</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Candidate Clinical Registry
+                </span>
+                <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-700 border border-amber-200">
+                  <Flame className="h-3 w-3 fill-amber-500" />
+                  Active Streak
+                </span>
+              </div>
+              <h1 className="mt-1 text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
+                Licensure Readiness Dashboard
+              </h1>
+            </div>
           </div>
 
-          <div className="specialty-breakdown-list">
-            {sortedCategories.length > 0 ? (
-              sortedCategories.map((item) => (
-                <div key={item.category} className="specialty-row-item">
-                  <div className="row-meta-line">
-                    <span className="row-title">
-                      {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
-                      <span className="row-counts"> ({item.correct}/{item.total} Qs)</span>
-                    </span>
-                    <div className="row-badge-group">
-                      {item.pct < 65 && <span className="focus-pill">Focus Area</span>}
-                      <span className="row-pct">{item.pct}%</span>
-                    </div>
-                  </div>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* AI Generator Trigger */}
+            <button
+              type="button"
+              onClick={() => setShowAIModal(true)}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-cyan-800 bg-cyan-700 px-4 text-xs font-bold text-white shadow-xs transition-colors hover:bg-cyan-800"
+            >
+              <Sparkles className="h-4 w-4 text-cyan-200" />
+              <span>AI Custom Drill</span>
+            </button>
 
-                  <div className="specialty-bar-track">
-                    <div
-                      className={`specialty-bar-fill ${
-                        item.pct >= 75 ? 'green' : item.pct >= 60 ? 'gold' : 'crimson'
-                      }`}
-                      style={{ width: `${Math.max(item.pct, 4)}%` }}
-                    />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-diagnostic-box">
-                <p>Complete at least one practice module or simulation to generate specialty diagnostics.</p>
-              </div>
+            {/* Official Credential Button */}
+            {metrics.isPassing && metrics.totalItems >= 50 && (
+              <button
+                type="button"
+                onClick={() => setShowCertificate(true)}
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 text-xs font-bold text-amber-900 transition-colors hover:bg-amber-100"
+              >
+                <Award className="h-4 w-4 text-amber-700" />
+                <span>View Certificate</span>
+              </button>
             )}
+
+            {/* Static Exam Trigger */}
+            <button
+              type="button"
+              onClick={() => navigate('/quiz')}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#1D2A59] px-5 text-xs font-bold uppercase tracking-wider text-white shadow-xs transition-colors hover:bg-[#283A78]"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Standard CAT</span>
+            </button>
+          </div>
+        </header>
+
+        {/* 2. Top-Level Metric Tiles */}
+        <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Diagnostic Accuracy
+            </span>
+            <p className={`mt-2 font-mono text-3xl font-extrabold ${
+              metrics.isPassing ? 'text-emerald-700' : 'text-slate-900'
+            }`}>
+              {metrics.accuracy}%
+            </p>
+            <span className="mt-1 block text-xs text-slate-500">
+              Benchmark Target: 65.0%
+            </span>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Calibrated Items Cleared
+            </span>
+            <p className="mt-2 font-mono text-3xl font-extrabold text-slate-900">
+              {metrics.totalItems}
+            </p>
+            <span className="mt-1 block text-xs text-slate-500">
+              Total Questions Answered
+            </span>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Clinical Standard Met
+            </span>
+            <div className="mt-2 flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs font-bold uppercase tracking-wider ${
+                metrics.isPassing 
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                {metrics.isPassing ? 'Above Passing Line' : 'Remediation Alert'}
+              </span>
+            </div>
+            <span className="mt-2 block text-xs text-slate-500">
+              NCSBN Cut-Off Calibrated
+            </span>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+              Recorded Sessions
+            </span>
+            <p className="mt-2 font-mono text-3xl font-extrabold text-slate-900">
+              {metrics.totalSessions}
+            </p>
+            <span className="mt-1 block text-xs text-slate-500">
+              Simulations Completed
+            </span>
           </div>
         </section>
 
-        {/* Right: Trend & Recent Attempts */}
-        <section className="dashboard-card">
-          <div className="card-heading-bar">
-            <div>
-              <span className="card-kicker">LONGITUDINAL TRACKING</span>
-              <h2 className="card-title">Recent Exam History</h2>
-            </div>
-            <span className="card-sub-hint">Last {history.length} Sessions</span>
+        {/* 3. Adaptive Remediation Trigger */}
+        <WeakAreasBanner />
+
+        {/* 4. Telemetry Graph & Candidate Credential Column */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 items-start">
+          <div className="lg:col-span-8 space-y-8">
+            <ScoreSparkline attempts={history} />
+            <CategoryBars categories={categoryBreakdown} />
           </div>
 
-          <div className="history-entries-list">
-            {history.length > 0 ? (
-              history.slice(0, 5).map((attempt, idx) => (
-                <div key={idx} className="history-item-row">
-                  <div className="history-info">
-                    <span className="history-mode-title">{attempt.mode || 'Clinical Session'}</span>
-                    <span className="history-timestamp">
-                      {attempt.timestamp ? new Date(attempt.timestamp).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }) : 'Recent Attempt'} · {attempt.questions?.length || 50} Qs
-                    </span>
-                  </div>
-
-                  <div className="history-score-cluster">
-                    <span
-                      className={`history-score-badge ${
-                        attempt.score >= 75 ? 'pass' : 'fail'
-                      }`}
-                    >
-                      {attempt.score}%
-                    </span>
-                    <Link
-                      to="/review"
-                      state={{
-                        questions: attempt.questions,
-                        userAnswers: attempt.userAnswers,
-                        confidenceLevels: attempt.confidenceLevels
-                      }}
-                      className="history-review-btn"
-                    >
-                      Review →
-                    </Link>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="empty-diagnostic-box">
-                <p>No exams logged yet. Launch a test to review your remediations.</p>
-              </div>
-            )}
+          <div className="lg:col-span-4 flex flex-col items-center">
+            <HoloPortrait />
           </div>
-        </section>
+        </div>
+
       </div>
+
+      {/* Official Certificate Modal */}
+      {showCertificate && (
+        <CertificateModal
+          score={metrics.accuracy}
+          totalQuestions={metrics.totalItems}
+          onClose={() => setShowCertificate(false)}
+        />
+      )}
+
+      {/* AI Dynamic Generation Modal */}
+      <AIExamModal
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+      />
     </div>
   );
 }

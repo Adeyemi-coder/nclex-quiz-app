@@ -1,308 +1,287 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { questions } from '../../data/questions.js';
-import { sounds } from '../../utils/soundEffects.js';
-import './FlashcardDeck.css';
-
-const STORAGE_KEY = 'nclex_flashcards_mastery_v1';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { 
+  RotateCw, 
+  ChevronLeft, 
+  ChevronRight, 
+  Shuffle, 
+  CheckCircle2, 
+  Layers,
+  Sparkles,
+  Bookmark
+} from 'lucide-react';
+import { questions as allQuestions } from '../../data/questions.js';
 
 export default function FlashcardDeck() {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-
-  const [masteryData, setMasteryData] = useState(() => {
+  const [masteredIds, setMasteredIds] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
+      const saved = localStorage.getItem('nclex_mastered_flashcards');
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return {};
+      return [];
     }
   });
+  const [isShuffled, setIsShuffled] = useState(false);
 
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
-
-  const categories = useMemo(() => {
-    const set = new Set(questions.map((q) => q.category).filter(Boolean));
-    return ['all', ...Array.from(set)];
+  // 1. Build flashcards from verified question bank
+  const rawCards = useMemo(() => {
+    return allQuestions.map((q, idx) => ({
+      id: q.id || idx,
+      category: q.category || 'General Clinical',
+      question: q.question || q.stem,
+      answer: q.options ? q.options[q.correctAnswer ?? 0] : (q.answer || 'Key Clinical Concept'),
+      rationale: q.rationale || q.explanation || 'Prioritize ABCs, patient safety, and provider notification.'
+    }));
   }, []);
 
-  const deck = useMemo(() => {
-    if (selectedCategory === 'all') return questions;
-    return questions.filter(
-      (q) => q.category?.toLowerCase() === selectedCategory.toLowerCase()
-    );
-  }, [selectedCategory]);
+  // 2. Extract Category List
+  const categories = useMemo(() => {
+    const set = new Set(rawCards.map((c) => c.category));
+    return ['All', ...Array.from(set).slice(0, 8)];
+  }, [rawCards]);
 
-  const currentCard = deck[currentIndex] || null;
-  const currentCardStats = currentCard ? masteryData[currentCard.id] : null;
+  // 3. Filter & Shuffle Logic
+  const activeDeck = useMemo(() => {
+    let filtered = selectedCategory === 'All' 
+      ? rawCards 
+      : rawCards.filter((c) => c.category.toLowerCase() === selectedCategory.toLowerCase());
+    
+    if (isShuffled) {
+      filtered = [...filtered].sort(() => 0.5 - Math.random());
+    }
+    return filtered.length > 0 ? filtered : rawCards.slice(0, 30);
+  }, [rawCards, selectedCategory, isShuffled]);
 
-  function advanceCard() {
+  const currentCard = activeDeck[currentIndex] || activeDeck[0] || {};
+  const isMastered = masteredIds.includes(currentCard.id);
+
+  // Keyboard navigation & spacebar flip
+  const handleFlip = useCallback(() => setIsFlipped((prev) => !prev), []);
+  const handleNext = useCallback(() => {
     setIsFlipped(false);
-    setCurrentIndex((prev) => (prev + 1 < deck.length ? prev + 1 : 0));
-  }
-
-  function handlePrev() {
-    sounds?.playClick?.();
+    setCurrentIndex((prev) => (prev + 1) % activeDeck.length);
+  }, [activeDeck.length]);
+  const handlePrev = useCallback(() => {
     setIsFlipped(false);
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : deck.length - 1));
-  }
+    setCurrentIndex((prev) => (prev - 1 + activeDeck.length) % activeDeck.length);
+  }, [activeDeck.length]);
 
-  function toggleFlip() {
-    sounds?.playClick?.();
-    setIsFlipped((prev) => !prev);
-  }
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        handleFlip();
+      } else if (e.code === 'ArrowRight') {
+        handleNext();
+      } else if (e.code === 'ArrowLeft') {
+        handlePrev();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleFlip, handleNext, handlePrev]);
 
-  function handleRateCard(rating) {
-    sounds?.playClick?.();
-    if (!currentCard) return;
-
-    setMasteryData((prev) => {
-      const current = prev[currentCard.id] || { count: 0 };
-      const updated = {
-        ...prev,
-        [currentCard.id]: {
-          rating,
-          count: current.count + 1,
-          lastReviewed: Date.now()
-        }
-      };
+  function toggleMastery(id) {
+    setMasteredIds((prev) => {
+      const updated = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem('nclex_mastered_flashcards', JSON.stringify(updated));
       } catch (e) {
-        console.warn('Could not save flashcard progress:', e);
+        console.error(e);
       }
       return updated;
     });
-
-    advanceCard();
   }
 
-  // Keyboard navigation
-  useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.code === 'Space' || e.key.toLowerCase() === 'f') {
-        e.preventDefault();
-        toggleFlip();
-      } else if (e.code === 'ArrowRight') {
-        advanceCard();
-      } else if (e.code === 'ArrowLeft') {
-        handlePrev();
-      } else if (isFlipped) {
-        if (e.key === '1') handleRateCard('again');
-        if (e.key === '2') handleRateCard('hard');
-        if (e.key === '3') handleRateCard('good');
-        if (e.key === '4') handleRateCard('easy');
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deck.length, isFlipped, currentCard]);
-
-  const masteredCount = useMemo(() => {
-    return deck.filter((q) => masteryData[q.id]?.rating === 'easy' || masteryData[q.id]?.rating === 'good').length;
-  }, [deck, masteryData]);
+  const progressPercent = Math.round(((currentIndex + 1) / activeDeck.length) * 100);
 
   return (
-    <div className="flashcards-experience-container">
-      {/* Editorial Header */}
-      <header className="fc-hero-header">
-        <div className="fc-header-top-tag">
-          <span className="fc-kicker">SPACED RECALL ENGINE</span>
-          <span className="fc-retention-rate">
-            {masteredCount}/{deck.length} Retained ({deck.length ? Math.round((masteredCount / deck.length) * 100) : 0}%)
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      
+      {/* 1. Header & Quick Controls */}
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-cyan-700">
+            <Layers className="h-3.5 w-3.5" strokeWidth={2} />
+            <span>Spaced Repetition Protocol</span>
+          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+            Clinical Recall Decks
+          </h1>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Review core pathophysiological concepts and drug actions with rapid-fire cue retrieval.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsShuffled((prev) => !prev)}
+            className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3.5 text-xs font-medium transition-all ${
+              isShuffled
+                ? 'border-cyan-700 bg-cyan-50 text-cyan-800'
+                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+            }`}
+          >
+            <Shuffle className="h-3.5 w-3.5" />
+            <span>{isShuffled ? 'Shuffled' : 'Shuffle Deck'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Standardized Category Filter Strip */}
+      <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            type="button"
+            onClick={() => {
+              setSelectedCategory(cat);
+              setCurrentIndex(0);
+              setIsFlipped(false);
+            }}
+            className={`rounded-lg px-3.5 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
+              selectedCategory === cat
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* 3. Progress Tracking Rail */}
+      <div className="mt-6 flex flex-col gap-2">
+        <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold text-slate-900">
+              CARD {currentIndex + 1} OF {activeDeck.length}
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="font-medium text-slate-500">{currentCard.category}</span>
+          </div>
+          <span className="font-mono text-xs font-semibold text-slate-400">
+            {progressPercent}% Complete
           </span>
         </div>
-        <h1 className="fc-main-title">Clinical Recall Deck</h1>
-        <p className="fc-sub-instructions">
-          Tap card to flip • Swipe left/right to navigate
-        </p>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <div 
+            className="h-full bg-cyan-700 transition-all duration-300 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </div>
 
-        {/* Filter Pills with Horizontal Scroll */}
-        <div className="fc-filter-container">
-          <div className="fc-filter-track">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                className={`fc-category-pill ${selectedCategory === cat ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedCategory(cat);
-                  setCurrentIndex(0);
-                  setIsFlipped(false);
-                }}
-              >
-                {cat === 'all' ? 'All Specialties' : cat}
-              </button>
-            ))}
+      {/* 4. The Unified Clinical Card Surface */}
+      <div 
+        onClick={handleFlip}
+        role="button"
+        tabIndex={0}
+        aria-label="Clinical flashcard surface. Click or press spacebar to flip."
+        className="group relative mt-4 flex min-h-[380px] cursor-pointer flex-col justify-between rounded-xl border border-slate-200 bg-white p-7 shadow-xs transition-all hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-cyan-600 focus:ring-offset-2 sm:p-9"
+      >
+        {/* Top Card Status Header */}
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4 text-xs">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${
+              isFlipped 
+                ? 'bg-emerald-50 text-emerald-700' 
+                : 'bg-cyan-50 text-cyan-800'
+            }`}>
+              <Sparkles className="h-3 w-3" />
+              {isFlipped ? 'Clinical Rationale & Mechanism' : 'Clinical Scenario / Patient Cue'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 group-hover:text-slate-600">
+            <RotateCw className="h-3.5 w-3.5 transition-transform group-hover:rotate-45" />
+            <span className="hidden sm:inline">Click or Space to flip</span>
           </div>
         </div>
-      </header>
 
-      {currentCard ? (
-        <div className="fc-stage-wrapper">
-          <div
-            className={`fc-flip-canvas ${isFlipped ? 'flipped' : ''}`}
-            onClick={toggleFlip}
-            role="button"
-            tabIndex={0}
-            onTouchStart={(e) => { touchStartX.current = e.targetTouches[0].clientX; }}
-            onTouchMove={(e) => { touchEndX.current = e.targetTouches[0].clientX; }}
-            onTouchEnd={() => {
-              const diff = touchStartX.current - touchEndX.current;
-              if (diff > 50) advanceCard();
-              if (diff < -50) handlePrev();
-              touchStartX.current = 0;
-              touchEndX.current = 0;
-            }}
-          >
-            <div className="fc-card-body">
-              {/* FRONT: Clinical Prompt */}
-              <div className="fc-card-face fc-front">
-                <div className="fc-meta-bar">
-                  <span className="fc-badge-specialty">
-                    {currentCard.category || 'Clinical Practice'}
-                  </span>
-                  <div className="fc-meta-right">
-                    {currentCardStats && (
-                      <span className={`fc-status-tag ${currentCardStats.rating}`}>
-                        {currentCardStats.rating.toUpperCase()}
-                      </span>
-                    )}
-                    <span className="fc-counter-pill">
-                      #{currentIndex + 1} <span className="dim">/ {deck.length}</span>
-                    </span>
-                  </div>
-                </div>
-
-                <div className="fc-stem-body">
-                  <p className="fc-stem-prose">{currentCard.question}</p>
-                </div>
-
-                <div className="fc-footer-hint">
-                  <span className="hint-pill">
-                    <span className="hint-icon">↻</span> Tap to Reveal Key &amp; Rationale
-                  </span>
-                </div>
-              </div>
-
-              {/* BACK: Verified Key & Mechanism */}
-              <div className="fc-card-face fc-back">
-                <div className="fc-meta-bar">
-                  <span className="fc-badge-specialty gold">Clinical Answer Key</span>
-                  <span className="fc-counter-pill">
-                    #{currentIndex + 1} <span className="dim">/ {deck.length}</span>
-                  </span>
-                </div>
-
-                <div className="fc-answer-container">
-                  <span className="fc-answer-label">PRIMARY INTERVENTION / FINDING</span>
-                  <h3 className="fc-answer-heading">{currentCard.correctAnswer}</h3>
-                  <div className="fc-rationale-wrapper">
-                    <p className="fc-rationale-prose">{currentCard.rationale}</p>
-                  </div>
-                </div>
-
-                <div className="fc-footer-hint">
-                  <span className="hint-pill">
-                    <span className="hint-icon">↻</span> Tap to view question prompt
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* DYNAMIC ACTION DOCK */}
+        {/* Card Main Body */}
+        <div className="my-auto py-6">
           {!isFlipped ? (
-            <div className="fc-action-dock">
-              <button
-                type="button"
-                className="fc-dock-btn secondary"
-                onClick={handlePrev}
-              >
-                ← Previous
-              </button>
-
-              <button
-                type="button"
-                className="fc-dock-btn flip"
-                onClick={toggleFlip}
-              >
-                Flip for Key
-              </button>
-
-              <button
-                type="button"
-                className="fc-dock-btn primary"
-                onClick={advanceCard}
-              >
-                Next Card →
-              </button>
-            </div>
+            <p className="text-lg font-medium leading-relaxed tracking-tight text-slate-900 sm:text-xl">
+              {currentCard.question}
+            </p>
           ) : (
-            <div className="fc-rating-dock">
-              <span className="fc-rating-heading">RATE RECALL CONFIDENCE:</span>
-              <div className="fc-rating-button-grid">
-                <button
-                  type="button"
-                  className="fc-rate-btn again"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRateCard('again');
-                  }}
-                >
-                  <span className="rate-num">1</span>
-                  <span className="rate-label">Again</span>
-                  <span className="rate-interval">&lt; 1 min</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="fc-rate-btn hard"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRateCard('hard');
-                  }}
-                >
-                  <span className="rate-num">2</span>
-                  <span className="rate-label">Hard</span>
-                  <span className="rate-interval">12 hrs</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="fc-rate-btn good"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRateCard('good');
-                  }}
-                >
-                  <span className="rate-num">3</span>
-                  <span className="rate-label">Good</span>
-                  <span className="rate-interval">1 day</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="fc-rate-btn easy"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRateCard('easy');
-                  }}
-                >
-                  <span className="rate-num">4</span>
-                  <span className="rate-label">Easy</span>
-                  <span className="rate-interval">4 days</span>
-                </button>
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                  Target Response / Diagnosis
+                </span>
+                <p className="mt-1 text-base font-semibold text-slate-900 sm:text-lg">
+                  {currentCard.answer}
+                </p>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4 border border-slate-100">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Pathophysiology &amp; Nursing Actions
+                </span>
+                <p className="mt-1.5 text-sm leading-relaxed text-slate-700">
+                  {currentCard.rationale}
+                </p>
               </div>
             </div>
           )}
         </div>
-      ) : (
-        <div className="fc-empty-state">
-          <p>No flashcards found for this module selection.</p>
+
+        {/* Bottom Card Footer */}
+        <div className="flex items-center justify-between border-t border-slate-100 pt-4 text-xs text-slate-400">
+          <span className="inline-flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${isMastered ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+            {isMastered ? 'Mastered in Question Bank' : 'Requires Spaced Review'}
+          </span>
+          <span className="hidden sm:inline font-mono text-[11px] text-slate-400">
+            ← Prev | Next →
+          </span>
         </div>
-      )}
+      </div>
+
+      {/* 5. Standardized Navigation & Mastery Control Bar */}
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        
+        {/* Step Controls */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handlePrev}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Previous</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNext}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
+          >
+            <span>Next</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Mastery Toggle Button */}
+        <button
+          type="button"
+          onClick={() => toggleMastery(currentCard.id)}
+          className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-5 text-xs font-semibold shadow-xs transition-all ${
+            isMastered
+              ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+              : 'border border-slate-200 bg-white text-slate-700 hover:border-emerald-600 hover:text-emerald-700 hover:bg-emerald-50/50'
+          }`}
+        >
+          <CheckCircle2 className={`h-4 w-4 ${isMastered ? 'text-white' : 'text-slate-400'}`} />
+          <span>{isMastered ? 'Marked Mastered' : 'Mark as Mastered'}</span>
+        </button>
+
+      </div>
+
     </div>
   );
 }

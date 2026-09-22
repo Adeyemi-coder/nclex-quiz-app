@@ -1,247 +1,276 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { questions } from '../../data/questions.js';
-import { useProgress } from '../../hooks/useProgress.js';
-import HoloPortrait from '../Hero/HoloPortrait.jsx';
-import './Home.css';
-
-const FEATURED_MODULES = [
-  {
-    id: 'pharmacology',
-    title: 'Pharmacology & Parenteral Therapies',
-    icon: '💊',
-    tag: 'High Yield',
-    desc: 'High-alert titrations, toxicities, and drug interactions.'
-  },
-  {
-    id: 'cardiovascular',
-    title: 'Cardiovascular Nursing',
-    icon: '🫀',
-    tag: 'Priority',
-    desc: 'Hemodynamic compromise, dysrhythmias, and ACS protocols.'
-  },
-  {
-    id: 'emergency',
-    title: 'Emergency & Critical Care',
-    icon: '🚨',
-    tag: 'Essential',
-    desc: 'ACLS algorithms, trauma resuscitation, and shock staging.'
-  },
-  {
-    id: 'maternal',
-    title: 'Maternal & Newborn Health',
-    icon: '👶',
-    tag: 'Core',
-    desc: 'Intrapartum complications, fetal monitoring, and neonatal care.'
-  }
-];
+import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  Stethoscope, 
+  Play, 
+  CreditCard, 
+  Layers, 
+  BarChart2, 
+  ShieldCheck, 
+  CheckCircle2, 
+  ArrowRight,
+  Clock,
+  Sparkles,
+  Flame,
+  Activity
+} from 'lucide-react';
+import { questions as allQuestions } from '../../data/questions.js';
 
 export default function Home() {
-  const navigate = useNavigate();
-  const {
-    history = [],
-    missedCount = 0,
-    bookmarkCount = 0,
-    overallAccuracy = 0,
-    totalAnswered = 0,
-    currentStreak = 0,
-    missedQuestions = {},
-    bookmarks = []
-  } = useProgress();
+  // 1. Pull dynamic candidate telemetry from session records
+  const quizHistory = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('nclex_quiz_history');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }, []);
 
-  function handleReviewMissed() {
-    if (missedCount === 0) return;
-    const safeMissed = missedQuestions || {};
-    const missedList = Object.values(safeMissed)
-      .map((m) => m?.question || m)
-      .filter(Boolean);
+  const totalAnswered = useMemo(() => {
+    return quizHistory.reduce((acc, curr) => acc + (curr.total || 0), 0);
+  }, [quizHistory]);
 
-    if (!missedList.length) return;
-    navigate('/review', {
-      state: {
-        questions: missedList,
-        userAnswers: Array(missedList.length).fill(null),
-      },
-    });
-  }
+  const totalCorrect = useMemo(() => {
+    return quizHistory.reduce((acc, curr) => acc + (curr.score || 0), 0);
+  }, [quizHistory]);
 
-  function handleReviewBookmarked() {
-    if (bookmarkCount === 0) return;
-    const safeBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
-    const bookmarkedList = (questions || []).filter((q) => safeBookmarks.includes(q.id));
-
-    if (!bookmarkedList.length) return;
-    navigate('/review', {
-      state: {
-        questions: bookmarkedList,
-        userAnswers: Array(bookmarkedList.length).fill(null),
-      },
-    });
-  }
-
-  const latestAttempt = history && history.length > 0 ? history[0] : null;
+  const candidateAccuracy = useMemo(() => {
+    if (!totalAnswered) return 0;
+    return Math.round((totalCorrect / totalAnswered) * 100);
+  }, [totalAnswered, totalCorrect]);
 
   return (
-    <div className="home-command-container">
-      {/* 1. Hero Section (Borderless & Expansive) */}
-      <section className="home-hero-section">
-        <div className="home-hero-content">
-          <div className="hero-streak-pill">
-            <span className="flame-icon">🔥</span>
-            <span>{currentStreak} DAY STUDY STREAK</span>
-          </div>
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      
+      {/* 1. Candidate Hero & Launch Console */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-xs sm:p-10">
+        
+        {/* Subtle Background Structural Accent */}
+        <div 
+          className="absolute -right-24 -top-24 h-96 w-96 rounded-full pointer-events-none opacity-40 blur-3xl"
+          style={{ background: 'radial-gradient(circle, #283A78 0%, #E2E8F0 70%, transparent 100%)' }}
+        />
 
-          <h1 className="home-hero-title">
-            NCLEX Clinical <span className="gold-shimmer-text">Master</span>
-          </h1>
-
-          <p className="home-hero-subtitle">
-            Next-Generation NCLEX &amp; NMCN clinical preparation platform. Access 550 verified rationales, adaptive CAT testing, and systematic remediation.
-          </p>
-
-          <div className="home-hero-cta-group">
-            <Link to="/quiz" className="primary-hero-btn">
-              ⚡ Start CAT Simulation (85–150 Qs)
-            </Link>
-            <Link to="/modules" className="secondary-hero-btn">
-              📚 Browse All 11 Modules
-            </Link>
-          </div>
-
-          {/* Clean Horizontal Metrics Bar */}
-          <div className="home-inline-stats">
-            <div className="inline-stat-item">
-              <span className="inline-stat-label">Clinical Accuracy</span>
-              <span className="inline-stat-val gold">{overallAccuracy}%</span>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+          
+          {/* Left: Academic Identity */}
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+              <ShieldCheck className="h-3.5 w-3.5 text-cyan-700" strokeWidth={2} />
+              <span>NCSBN NCJMM &amp; NMCN Calibrated Suite</span>
             </div>
-            <div className="inline-stat-divider" />
-            <div className="inline-stat-item">
-              <span className="inline-stat-label">Questions Logged</span>
-              <span className="inline-stat-val">{totalAnswered}</span>
-            </div>
-            <div className="inline-stat-divider" />
-            <div className="inline-stat-item">
-              <span className="inline-stat-label">Recent Test</span>
-              <span
-                className={`inline-stat-val ${
-                  latestAttempt?.score >= 75 ? 'emerald' : 'garnet'
-                }`}
+
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              Next Generation NCLEX &amp; Licensure Examination Suite
+            </h1>
+
+            <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
+              A clinical decision-making simulation environment. Practice with 550 verified case scenarios, prioritized hypotheses, and evidence-based rationales designed to Pearson VUE standards.
+            </p>
+
+            {/* Quick Action Group */}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                to="/quiz/all"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-cyan-700 px-6 text-xs font-bold tracking-wide text-white shadow-xs transition-colors hover:bg-cyan-800 focus:outline-none"
               >
-                {latestAttempt ? `${latestAttempt.score}%` : '—'}
+                <Play className="h-4 w-4 fill-white" />
+                <span>Launch Comprehensive CAT (85 Qs)</span>
+              </Link>
+
+              <Link
+                to="/modules"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
+              >
+                <Layers className="h-4 w-4 text-slate-500" strokeWidth={1.8} />
+                <span>Select Specialty Module</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: Real-time Diagnostic Snapshot Card */}
+          <div className="w-full lg:w-80 shrink-0 rounded-xl border border-slate-200 bg-slate-50/70 p-5">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Licensure Readiness
+              </span>
+              <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
+                candidateAccuracy >= 65 
+                  ? 'bg-emerald-100 text-emerald-800' 
+                  : 'bg-amber-100 text-amber-800'
+              }`}>
+                {totalAnswered < 20 ? 'Calibrating' : candidateAccuracy >= 65 ? 'Passing Benchmark' : 'Review Target'}
               </span>
             </div>
-          </div>
-        </div>
 
-        {/* Hero Visual Card */}
-        <div className="home-hero-visual">
-          <HoloPortrait
-            caption="Built by Adeyemi Kehinde, RN Candidate"
-            alt="NCLEX Clinical Master Founder"
-            showParticles={true}
-            interactive={true}
-          />
-        </div>
-      </section>
-
-      {/* 2. Diagnostic & Remediation Cards */}
-      <section className="home-quick-actions-section">
-        <span className="section-label">REMEDIATION &amp; DIAGNOSTICS</span>
-
-        <div className="quick-access-banner-grid">
-          {/* Missed Questions */}
-          <div
-            className={`quick-card ${missedCount > 0 ? 'active' : 'idle'}`}
-            onClick={handleReviewMissed}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="quick-card-left">
-              <span className="quick-icon">{missedCount > 0 ? '⚠️' : '✓'}</span>
+            <div className="mt-4 space-y-3">
               <div>
-                <div className="quick-title">Review Missed Items</div>
-                <div className="quick-count">
-                  {missedCount > 0
-                    ? `${missedCount} Questions to Remediate`
-                    : 'All Clear · No Missed Items'}
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-slate-500">Cumulative Accuracy</span>
+                  <span className="font-mono font-bold text-slate-900">{candidateAccuracy}%</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div 
+                    className="h-full bg-cyan-700 transition-all duration-300"
+                    style={{ width: `${Math.max(candidateAccuracy, 5)}%` }}
+                  />
                 </div>
               </div>
-            </div>
-            {missedCount > 0 && <span className="quick-arrow">→</span>}
-          </div>
 
-          {/* Bookmarks */}
-          <div
-            className={`quick-card ${bookmarkCount > 0 ? 'active' : 'idle'}`}
-            onClick={handleReviewBookmarked}
-            role="button"
-            tabIndex={0}
-          >
-            <div className="quick-card-left">
-              <span className="quick-icon">{bookmarkCount > 0 ? '★' : '☆'}</span>
-              <div>
-                <div className="quick-title">Bookmarked Questions</div>
-                <div className="quick-count">
-                  {bookmarkCount > 0
-                    ? `${bookmarkCount} Questions Saved`
-                    : '0 Questions Saved'}
-                </div>
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-slate-500">Items Practiced</span>
+                <span className="font-mono font-semibold text-slate-900">{totalAnswered} / {allQuestions.length}</span>
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="text-slate-500">Target Pace</span>
+                <span className="font-mono font-semibold text-emerald-700">72s / item</span>
               </div>
             </div>
-            {bookmarkCount > 0 && <span className="quick-arrow">→</span>}
+
+            <Link
+              to="/dashboard"
+              className="mt-5 flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white py-2 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-100"
+            >
+              <span>View Full NCJMM Report</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
 
-          {/* Dashboard Shortcut */}
-          <Link to="/dashboard" className="quick-card active highlight">
-            <div className="quick-card-left">
-              <span className="quick-icon">📊</span>
-              <div>
-                <div className="quick-title">Performance Analytics</div>
-                <div className="quick-count">{overallAccuracy}% Candidate Competency</div>
-              </div>
-            </div>
-            <span className="quick-arrow">→</span>
-          </Link>
         </div>
-      </section>
+      </div>
 
-      {/* 3. Fast-Launch Specialty Modules */}
-      <section className="home-featured-section">
-        <div className="section-header-row">
+      {/* 2. Structured Clinical Quick-Paths */}
+      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+        
+        {/* Path 1: High Acuity Cardiovascular & Shock */}
+        <Link
+          to="/quiz/Cardiovascular"
+          className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-xs transition-all hover:border-slate-300 hover:shadow-md"
+        >
           <div>
-            <span className="section-label">HIGH-YIELD SPECIALTIES</span>
-            <h2 className="section-subheading">Jump straight into core clinical modules</h2>
-          </div>
-          <Link to="/modules" className="view-all-link">
-            View All 11 Modules ({(questions || []).length} Questions) →
-          </Link>
-        </div>
-
-        <div className="featured-modules-grid">
-          {FEATURED_MODULES.map((item) => (
-            <div key={item.id} className="featured-module-card">
-              <div className="feat-body">
-                <div className="feat-header">
-                  <span className="feat-icon">{item.icon}</span>
-                  <span className="feat-tag">{item.tag}</span>
-                </div>
-                <h3 className="feat-title">{item.title}</h3>
-                <p className="feat-desc">{item.desc}</p>
-              </div>
-
-              <div className="feat-footer">
-                <span className="feat-meta">50 Questions</span>
-                <Link
-                  to={`/quiz/${encodeURIComponent(item.id)}`}
-                  className="feat-start-btn"
-                >
-                  Launch Module →
-                </Link>
-              </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-700 border border-rose-100">
+              <Activity className="h-5 w-5" strokeWidth={2} />
             </div>
-          ))}
+            <h2 className="mt-4 text-base font-bold tracking-tight text-slate-900 group-hover:text-cyan-800 transition-colors">
+              Cardiovascular &amp; Hemodynamics
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Practice STEMI recognition, cardiogenic shock titration, and complex dysrhythmia management.
+            </p>
+          </div>
+          <div className="mt-6 flex items-center gap-1 text-xs font-semibold text-cyan-700">
+            <span>Start Cardiovascular Drill</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </div>
+        </Link>
+
+        {/* Path 2: Pharmacology & Titration Drills */}
+        <Link
+          to="/quiz/Pharmacology"
+          className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-xs transition-all hover:border-slate-300 hover:shadow-md"
+        >
+          <div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700 border border-amber-100">
+              <Sparkles className="h-5 w-5" strokeWidth={2} />
+            </div>
+            <h2 className="mt-4 text-base font-bold tracking-tight text-slate-900 group-hover:text-cyan-800 transition-colors">
+              Pharmacology &amp; Parenteral Safety
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              High-alert titrations, narrow therapeutic index toxicity, and medication reversal antidotes.
+            </p>
+          </div>
+          <div className="mt-6 flex items-center gap-1 text-xs font-semibold text-cyan-700">
+            <span>Start Pharmacology Drill</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </div>
+        </Link>
+
+        {/* Path 3: Spaced Repetition Flashcards */}
+        <Link
+          to="/flashcards"
+          className="group flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 shadow-xs transition-all hover:border-slate-300 hover:shadow-md"
+        >
+          <div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-100">
+              <CreditCard className="h-5 w-5" strokeWidth={2} />
+            </div>
+            <h2 className="mt-4 text-base font-bold tracking-tight text-slate-900 group-hover:text-cyan-800 transition-colors">
+              Active Recall Flashcards
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+              Review essential pathophysiological cues, lab reference ranges, and critical nursing actions.
+            </p>
+          </div>
+          <div className="mt-6 flex items-center gap-1 text-xs font-semibold text-cyan-700">
+            <span>Review Flashcard Deck</span>
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+          </div>
+        </Link>
+
+      </div>
+
+      {/* 3. NCSBN Examination Blueprint Distribution */}
+      <div className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+        <div className="border-b border-slate-100 pb-4">
+          <h2 className="text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+            NCSBN Licensure Blueprint &amp; Client Needs Framework
+          </h2>
+          <p className="text-xs text-slate-500">
+            Proportional representation of clinical judgment competencies assessed on the NCLEX-RN and NMCN examinations.
+          </p>
         </div>
-      </section>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <span className="text-xs font-semibold text-slate-900">Safe &amp; Effective Care</span>
+            <div className="mt-2 flex items-baseline justify-between text-xs">
+              <span className="text-slate-500">Exam Weight</span>
+              <span className="font-mono font-bold text-slate-900">26–38%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-cyan-700" style={{ width: '32%' }} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <span className="text-xs font-semibold text-slate-900">Physiological Integrity</span>
+            <div className="mt-2 flex items-baseline justify-between text-xs">
+              <span className="text-slate-500">Exam Weight</span>
+              <span className="font-mono font-bold text-slate-900">38–62%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-cyan-700" style={{ width: '50%' }} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <span className="text-xs font-semibold text-slate-900">Psychosocial Integrity</span>
+            <div className="mt-2 flex items-baseline justify-between text-xs">
+              <span className="text-slate-500">Exam Weight</span>
+              <span className="font-mono font-bold text-slate-900">6–12%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-cyan-700" style={{ width: '9%' }} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-4">
+            <span className="text-xs font-semibold text-slate-900">Health Promotion</span>
+            <div className="mt-2 flex items-baseline justify-between text-xs">
+              <span className="text-slate-500">Exam Weight</span>
+              <span className="font-mono font-bold text-slate-900">6–12%</span>
+            </div>
+            <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-cyan-700" style={{ width: '9%' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 }

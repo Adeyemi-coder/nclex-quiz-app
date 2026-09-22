@@ -1,135 +1,144 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import './Review.css';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  FileText, 
+  AlertCircle, 
+  RotateCcw,
+  CheckCircle2,
+  XCircle,
+  Bookmark
+} from 'lucide-react';
+import ReviewCard from './ReviewCard.jsx';
+import * as ProgressModule from '../../hooks/useProgress.js';
 
-export default function Review({ userAnswers, questions, onRetake }) {
-  const [filter, setFilter] = useState('all');
+export default function ReviewScreen() {
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const mappedQuestions = questions.map((q, idx) => ({
-    ...q,
-    originalIndex: idx,
-    selectedAnswer: userAnswers[idx],
-  }));
+  // Safe hook handling
+  const useProgressHook = ProgressModule.useProgress || ProgressModule.default;
+  let hookBookmarks = [];
+  let hookToggleBookmark = null;
 
-  const filteredQuestions = mappedQuestions.filter((item) => {
-    const isCorrect = item.selectedAnswer === item.correctAnswer;
-    if (filter === 'correct') return isCorrect;
-    if (filter === 'incorrect') return !isCorrect;
-    return true;
-  });
+  try {
+    if (typeof useProgressHook === 'function') {
+      const p = useProgressHook();
+      if (p) {
+        hookBookmarks = Array.isArray(p.bookmarks) ? p.bookmarks : [];
+        hookToggleBookmark = p.toggleBookmark;
+      }
+    }
+  } catch (e) {
+    console.warn('useProgress fallback engaged:', e);
+  }
 
-  const incorrectCount = userAnswers.filter(
-    (ans, idx) => ans !== questions[idx].correctAnswer
-  ).length;
+  const [localBookmarks, setLocalBookmarks] = useState(hookBookmarks);
 
-  const correctCount = userAnswers.filter(
-    (ans, idx) => ans === questions[idx].correctAnswer
-  ).length;
+  function handleToggleBookmark(id) {
+    if (typeof hookToggleBookmark === 'function') {
+      hookToggleBookmark(id);
+    }
+    setLocalBookmarks((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
+  }
+
+  // Parse questions from location.state safely
+  const rawQuestions = location.state?.questions || location.state?.missedQuestions;
+  const questions = Array.isArray(rawQuestions) ? rawQuestions : [];
+  
+  // Normalize userAnswers whether passed as an object ({0: 1}) or array ([1, null])
+  const rawAnswers = location.state?.userAnswers;
+  const userAnswers = Array.isArray(rawAnswers)
+    ? rawAnswers
+    : typeof rawAnswers === 'object' && rawAnswers !== null
+    ? questions.map((_, idx) => rawAnswers[idx] ?? null)
+    : Array(questions.length).fill(null);
+
+  // Fallback if accessed directly without state
+  if (!questions.length) {
+    return (
+      <div className="mx-auto max-w-xl px-4 py-20 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-xs">
+          <AlertCircle className="h-6 w-6" strokeWidth={1.8} />
+        </div>
+        <h2 className="mt-4 text-base font-bold text-slate-900">No Review Session Found</h2>
+        <p className="mt-1 text-xs text-slate-500">
+          Session data resets on page refresh. Finish a quiz attempt to review clinical items with active rationales.
+        </p>
+        <Link
+          to="/quiz"
+          className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-cyan-700 px-5 text-xs font-semibold text-white transition-colors hover:bg-cyan-800"
+        >
+          Take Practice Drill
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="review-container">
-      <div className="review-header">
-        <div>
-          <span className="review-eyebrow">NCLEX Comprehensive Review</span>
-          <h2 className="review-title">Clinical Performance & Rationales</h2>
+    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+      
+      {/* Top Header & Navigation Bar */}
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:bg-slate-50 hover:text-slate-900"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Results</span>
+          </button>
+
+          <span className="font-mono text-xs font-semibold text-slate-400">
+            {questions.length} Scenario{questions.length === 1 ? '' : 's'} Logged
+          </span>
         </div>
-        <div className="review-actions-top">
-          {onRetake ? (
-            <button type="button" onClick={onRetake} className="ghost-btn">
-              Retake Exam
-            </button>
-          ) : (
-            <Link to="/quiz" className="ghost-btn">
-              Retake Exam
-            </Link>
-          )}
-          <Link to="/" className="primary-btn">
-            Exit to Home
-          </Link>
+
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-cyan-100 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-800">
+            <FileText className="h-3.5 w-3.5" />
+            <span>Clinical Rationale Audit</span>
+          </span>
         </div>
       </div>
 
-      <div className="review-tabs">
+      {/* Review Cards Stack */}
+      <div className="mt-6 flex flex-col gap-5">
+        {questions.map((q, idx) => (
+          <ReviewCard
+            key={q.id ?? q.stem ?? idx}
+            question={q}
+            index={idx}
+            userAnswer={userAnswers[idx]}
+            isBookmarked={localBookmarks.includes(q.id ?? idx)}
+            onToggleBookmark={() => handleToggleBookmark(q.id ?? idx)}
+          />
+        ))}
+      </div>
+
+      {/* Bottom Sticky Action Footer */}
+      <div className="mt-10 flex items-center justify-between border-t border-slate-200 pt-6">
         <button
           type="button"
-          className={`tab-btn ${filter === 'all' ? 'active' : ''}`}
-          onClick={() => setFilter('all')}
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="text-xs font-medium text-slate-500 hover:text-slate-900"
         >
-          All Questions ({questions.length})
+          ↑ Return to Top
         </button>
+
         <button
           type="button"
-          className={`tab-btn ${filter === 'incorrect' ? 'active' : ''}`}
-          onClick={() => setFilter('incorrect')}
+          onClick={() => navigate('/quiz')}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-cyan-700 px-5 text-xs font-bold text-white shadow-xs transition-colors hover:bg-cyan-800"
         >
-          Incorrect ({incorrectCount})
-        </button>
-        <button
-          type="button"
-          className={`tab-btn ${filter === 'correct' ? 'active' : ''}`}
-          onClick={() => setFilter('correct')}
-        >
-          Correct ({correctCount})
+          <RotateCcw className="h-3.5 w-3.5" />
+          <span>Launch Next CAT Drill</span>
         </button>
       </div>
 
-      <div className="review-list">
-        {filteredQuestions.map((q) => {
-          const isCorrect = q.selectedAnswer === q.correctAnswer;
-          const isUnanswered = q.selectedAnswer === null;
-
-          return (
-            <div
-              key={q.id || q.originalIndex}
-              className={`review-card ${isCorrect ? 'status-correct' : 'status-incorrect'}`}
-            >
-              <div className="card-top-meta">
-                <span className="q-badge">Question {q.originalIndex + 1}</span>
-                <span className={`result-tag ${isCorrect ? 'correct' : 'incorrect'}`}>
-                  {isCorrect ? '✓ Correct' : isUnanswered ? '○ Unanswered' : '✕ Incorrect'}
-                </span>
-              </div>
-
-              <h3 className="review-stem">{q.question}</h3>
-
-              <div className="review-options">
-                {q.answers.map((opt) => {
-                  const isUserSelection = opt === q.selectedAnswer;
-                  const isRightAnswer = opt === q.correctAnswer;
-
-                  let optionClass = 'review-option';
-                  if (isRightAnswer) optionClass += ' is-correct-answer';
-                  if (isUserSelection && !isRightAnswer) optionClass += ' is-user-wrong';
-
-                  return (
-                    <div key={opt} className={optionClass}>
-                      <div className="option-indicator">
-                        {isRightAnswer && <span className="icon-emerald">✓</span>}
-                        {isUserSelection && !isRightAnswer && <span className="icon-garnet">✕</span>}
-                        {!isRightAnswer && !isUserSelection && <span className="icon-neutral">○</span>}
-                      </div>
-                      <span className="option-text">{opt}</span>
-                      {isUserSelection && (
-                        <span className="user-choice-pill">Your Answer</span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="rationale-box">
-                <div className="rationale-header">
-                  <span className="gold-sparkle">✦</span>
-                  <h4>Clinical Rationale & NCLEX Insight</h4>
-                </div>
-                <p className="rationale-text">
-                  {q.rationale || 'No detailed rationale provided for this question.'}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
