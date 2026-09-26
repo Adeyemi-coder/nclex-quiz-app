@@ -1,4 +1,7 @@
 import React, { useMemo } from 'react';
+import { FullScreenHospitalCinema } from '../../components/Home/FullScreenHospitalCinema';
+import { Play } from 'lucide-react';
+
 import { Link } from 'react-router-dom';
 import { 
   Stethoscope, 
@@ -14,6 +17,12 @@ import {
   Flame,
   Activity
 } from 'lucide-react';
+export const HomePage = () => {
+  const navigate = useNavigate();
+
+  // Full-Screen Cinema Popout State
+  const [cinemaOpen, setCinemaOpen] = useState(false);
+}
 import { questions as allQuestions } from '../../data/questions.js';
 
 export default function Home() {
@@ -212,6 +221,7 @@ export default function Home() {
         </Link>
 
       </div>
+     
 
       {/* 3. NCSBN Examination Blueprint Distribution */}
       <div className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-xs sm:p-8">

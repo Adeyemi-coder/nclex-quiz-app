@@ -1,46 +1,163 @@
 @import "tailwindcss";
 
-:root {
-  --bg-vanilla-mist: #F4EEDC;
-  --surface-vanilla: #FBF8EF;
-  --indigo-primary: #283A78;
-  --indigo-deep: #1D2A59;
-  --text-ink: #202535;
-  --text-slate: #62697A;
-  --border-soft: #DDD9CC;
-  --accent-gold: #B89A5A;
-  --status-success: #47705A;
-  --status-error: #A65353;
+@theme {
+  /* Brand colors */
+  --color-brand-primary: #1D2A59;
+  --color-brand-secondary: #283A78;
+  --color-brand-subtle: #3A4D8F;
+
+  /* Surfaces & Canvas */
+  --color-surface-canvas: #F8FAFC;
+  --color-surface-card: #FFFFFF;
+  --color-surface-muted: #F1F5F9;
+  --color-surface-subtle: #E2E8F0;
+  --color-surface-border: #E9EDF5;
+
+  /* Clinical Semantic State Colors */
+  --color-clinical-success: #059669;
+  --color-clinical-warning: #D97706;
+  --color-clinical-danger: #DC2626;
+  --color-clinical-info: #2563EB;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Shadows */
+  --shadow-subtle: 0 1px 2px 0 rgba(16, 24, 40, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(16, 24, 40, 0.08), 0 1px 2px -1px rgba(16, 24, 40, 0.08);
+  --shadow-dropdown: 0 4px 6px -2px rgba(16, 24, 40, 0.03), 0 12px 16px -4px rgba(16, 24, 40, 0.08);
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
+@import "tailwindcss";
+
+@theme {
+  --color-canvas-light: #F7F9FC;
+  --color-canvas-dark: #071A3D;
+  --color-canvas-panel: #0D2452;
+  --color-brand-primary: #071A3D;
+  --color-brand-secondary: #102D63;
+  --color-brand-accent: #2563EB;
+  
+  --color-clinical-correct: #16A34A;
+  --color-clinical-incorrect: #DC2626;
+  --color-clinical-caution: #D97706;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  background-color: #F4EEDC;
-  color: #202535;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
+@layer utilities {
+  .perspective-view {
+    perspective: 1400px;
+  }
+  .transform-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-hero {
+    transform: rotateY(-8deg) rotateX(4deg) translateZ(0);
+  }
 }
 
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Subtle Technical Grid Blueprint */
+.bg-blueprint-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(16, 45, 99, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 45, 99, 0.05) 1px, transparent 1px);
 }
 
-.app-shell {
-  min-height: 100vh;
-  background-color: #F4EEDC;
-  display: flex;
-  flex-direction: column;
+.bg-blueprint-grid-dark {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }
 
-main {
-  flex: 1;
+body {
+  background-color: var(--color-surface-canvas);
+  color: #1e293b;
+  font-family: var(--font-sans);
+}
+
+@keyframes clinicalFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: clinicalFadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+
+@layer utilities {
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+  .perspective-2000 {
+    perspective: 2000px;
+  }
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+  .backface-hidden {
+    backface-visibility: hidden;
+  }
+  .rotate-x-6 {
+    transform: rotateX(6deg);
+  }
+  .rotate-y-n6 {
+    transform: rotateY(-6deg);
+  }
+  .rotate-y-6 {
+    transform: rotateY(6deg);
+  }
+}
+
+/* Subtle Clinical Grid Background */
+.bg-clinical-grid {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(16, 45, 99, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16, 45, 99, 0.05) 1px, transparent 1px);
+}
+
+.bg-clinical-grid-dark {
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(59, 130, 246, 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 130, 246, 0.07) 1px, transparent 1px);
+}
+
+/* Soft Hardware Acceleration Keyframe */
+@keyframes ambientFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0.5deg);
+  }
+}
+
+.animate-ambient-float {
+  animation: ambientFloat 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ambient-float {
+    animation: none;
+  }
 }
