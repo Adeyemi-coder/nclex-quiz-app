@@ -1,199 +1,195 @@
 // src/services/studentStorage.js
 
-const getActiveUserKey = (prefix) => {
+const DEFAULT_PROFILE = {
+  name: 'Candidate',
+  indexNumber: 'NMCN/2026/RN-PRO',
+  targetExam: 'General Nursing Licensure (NMCN)',
+  targetDate: 'November 2026',
+};
+
+// Course catalog to calculate real bank totals & subject matrix
+const SUBJECT_CATALOG = [
+  { name: 'Anatomy & Physiology', slug: 'anatomyPhysiology', total: 60 },
+  { name: 'Medical-Surgical Nursing', slug: 'medicalSurgicalNursing', total: 100 },
+  { name: 'Maternal & Child Health', slug: 'maternalChildHealth', total: 75 },
+  { name: 'Primary Health Care (PHC)', slug: 'primaryHealthCare', total: 80 },
+  { name: 'Nursing Ethics & Jurisprudence', slug: 'nursingEthics', total: 50 },
+  { name: 'Emergency & Disaster Triage', slug: 'emergencyDisaster', total: 45 },
+  { name: 'Pharmacology in Nursing', slug: 'pharmacology', total: 70 },
+  { name: 'Fundamentals of Nursing', slug: 'fundamentalsOfNursing', total: 85 },
+];
+
+export function getStudentProfile() {
   try {
-    const active = JSON.parse(localStorage.getItem('nclex_active_session') || '{}');
-    const userId = active.id || 'default_user';
-    return `${prefix}_${userId}`;
+    const user = JSON.parse(localStorage.getItem('user'));
+    const savedProfile = JSON.parse(localStorage.getItem('studentProfile') || '{}');
+    return {
+      ...DEFAULT_PROFILE,
+      ...savedProfile,
+      name: user?.name || savedProfile?.name || DEFAULT_PROFILE.name,
+    };
   } catch {
-    return `${prefix}_default_user`;
+    return DEFAULT_PROFILE;
   }
-};
+}
 
-export const SUBJECT_METRICS_MAP = {
-  'Anatomy & Physiology': { slug: 'anatomyPhysiology', total: 150 },
-  'Primary Health Care (PHC)': { slug: 'primaryHealthCare', total: 150 },
-  'Nursing Ethics & Jurisprudence': { slug: 'nursingEthics', total: 150 },
-  'Emergency & Disaster Nursing': { slug: 'emergency', total: 150 },
-  'Fundamentals of Nursing (FON)': { slug: 'fundamentals', total: 150 },
-  'Politics & Policy in Nursing': { slug: 'politicsInNursing', total: 150 },
-  'Pharmacology': { slug: 'fundamentals', total: 150 },
-  'Medical-Surgical Nursing': { slug: 'fundamentals', total: 150 },
-};
-
-export const getStudentProfile = () => {
-  const active = localStorage.getItem('nclex_active_session');
-  if (active) {
-    return JSON.parse(active);
+export function updateStudentProfile(updates) {
+  try {
+    const current = getStudentProfile();
+    const updated = { ...current, ...updates };
+    localStorage.setItem('studentProfile', JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.error('Failed to update student profile', e);
+    return DEFAULT_PROFILE;
   }
-  return {
-    name: 'Adeyemi Kehinde',
-    email: 'adeyemi@clinicalmaster.com',
-    indexNumber: 'NMCN/UITH/2026/0491',
-    targetExam: 'NMCN RN Professional Exam',
-    streakDays: 1,
-    lastActiveDate: new Date().toISOString().split('T')[0]
-  };
-};
+}
 
-export const updateStudentProfile = (updatedData) => {
-  const current = getStudentProfile();
-  const merged = { ...current, ...updatedData };
-  localStorage.setItem('nclex_active_session', JSON.stringify(merged));
-  return merged;
-};
-
-export const getExamHistory = () => {
-  const key = getActiveUserKey('nclex_exam_history');
-  const data = localStorage.getItem(key);
-  return data ? JSON.parse(data) : [];
-};
-
-export const recordExamAttempt = ({
-  subjectName,
-  slug,
-  score,
-  totalQuestions,
-  correctCount,
-  timeSpentSeconds,
-  mode = 'Timed Exam',
-  missedQuestions = []
-}) => {
-  const key = getActiveUserKey('nclex_exam_history');
-  const history = getExamHistory();
-  const now = new Date();
-
-  const record = {
-    id: `EX-${Math.floor(1000 + Math.random() * 9000)}`,
-    exam: `${subjectName} Assessment`,
-    subject: subjectName,
-    slug: slug || 'fundamentals',
-    questions: totalQuestions,
-    correctCount,
-    score: Math.round(score),
-    date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    timestamp: now.toISOString(),
-    status: score >= 75 ? 'Completed' : 'Needs Review',
-    mode,
-    timeSpentSeconds,
-    missedQuestions,
-  };
-
-  const updatedHistory = [record, ...history];
-  localStorage.setItem(key, JSON.stringify(updatedHistory));
-  return record;
-};
-
-export const getDashboardMetrics = () => {
-  const history = getExamHistory();
+export function getDashboardMetrics() {
   const profile = getStudentProfile();
 
-  if (history.length === 0) {
-    return {
-      profile,
-      totalAnswered: 0,
-      overallAccuracy: 0,
-      examsCompleted: 0,
-      averageScore: 0,
-      streakDays: profile.streakDays || 1,
-      subjectBreakdown: Object.keys(SUBJECT_METRICS_MAP).map((key) => ({
-        name: key,
-        accuracy: 0,
-        attempted: 0,
-        total: SUBJECT_METRICS_MAP[key].total,
-        progress: 0,
-      })),
-      recentExams: [],
-      recentActivity: [],
-    };
+  // Read actual exam history written by Quiz.jsx
+  let history = [];
+  try {
+    history = JSON.parse(
+      localStorage.getItem('studyHistory') || 
+      localStorage.getItem('quizResults') || 
+      localStorage.getItem('nclex_quiz_history') || 
+      '[]'
+    );
+    if (!Array.isArray(history)) history = [];
+  } catch {
+    history = [];
   }
 
+  // Read aggregated user progress
+  let progress = { totalAnswered: 0, totalCorrect: 0, byCategory: {} };
+  try {
+    const rawProg = localStorage.getItem('nclex_user_progress');
+    if (rawProg) progress = JSON.parse(rawProg);
+  } catch {
+    // fallback
+  }
+
+  // Derive verified metrics directly from history
   const examsCompleted = history.length;
-  const totalAnswered = history.reduce((acc, h) => acc + (h.questions || 0), 0);
-  const sumCorrect = history.reduce(
-    (acc, h) => acc + (h.correctCount || Math.round((h.score / 100) * h.questions)),
-    0
-  );
-  const overallAccuracy = totalAnswered > 0 ? Math.round((sumCorrect / totalAnswered) * 100) : 0;
-  const averageScore = Math.round(
-    history.reduce((acc, h) => acc + h.score, 0) / examsCompleted
-  );
+  
+  // Total answered questions across all taken sessions
+  const totalAnswered = history.reduce((sum, h) => sum + (h.totalQuestions || h.total || 0), 0) 
+    || progress.totalAnswered 
+    || 0;
 
-  const subjectBreakdown = Object.keys(SUBJECT_METRICS_MAP).map((subjectName) => {
-    const subjectExams = history.filter(
-      (h) => h.subject.toLowerCase() === subjectName.toLowerCase()
-    );
-    const totalBank = SUBJECT_METRICS_MAP[subjectName].total;
+  const totalCorrect = history.reduce((sum, h) => sum + (h.correctCount ?? 0), 0) 
+    || progress.totalCorrect 
+    || 0;
 
-    if (subjectExams.length === 0) {
-      return {
-        name: subjectName,
-        accuracy: 0,
-        attempted: 0,
-        total: totalBank,
-        progress: 0,
-      };
-    }
+  const overallAccuracy = totalAnswered > 0 
+    ? Math.round((totalCorrect / totalAnswered) * 100) 
+    : 0;
 
-    const attempted = subjectExams.reduce((sum, e) => sum + e.questions, 0);
-    const correct = subjectExams.reduce(
-      (sum, e) => sum + (e.correctCount || Math.round((e.score / 100) * e.questions)),
-      0
-    );
+  const averageScore = examsCompleted > 0
+    ? Math.round(history.reduce((sum, h) => sum + (h.score ?? 0), 0) / examsCompleted)
+    : 0;
+
+  // Calculate real streak (days where an exam was completed)
+  const uniqueDates = [...new Set(history.map(h => (h.date || '').split('T')[0]).filter(Boolean))];
+  const streakDays = uniqueDates.length;
+  const lastActiveDate = uniqueDates.length > 0 ? uniqueDates[0] : null;
+
+  // Build subject breakdown matrix dynamically from actual attempts
+  const subjectBreakdown = SUBJECT_CATALOG.map((subject) => {
+    // Find attempts matching this subject
+    const subjectAttempts = history.filter((h) => {
+      const matchTarget = `${h.subjectName || ''} ${h.category || ''} ${h.slug || ''}`.toLowerCase();
+      const sName = subject.name.toLowerCase();
+      const sSlug = subject.slug.toLowerCase();
+      return matchTarget.includes(sSlug) || matchTarget.includes(sName.split(' ')[0]);
+    });
+
+    const attempted = subjectAttempts.reduce((sum, h) => sum + (h.totalQuestions || h.total || 0), 0);
+    const correct = subjectAttempts.reduce((sum, h) => sum + (h.correctCount || 0), 0);
     const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
-    const progress = Math.min(100, Math.round((attempted / totalBank) * 100));
+    const progressPercent = Math.min(100, Math.round((attempted / subject.total) * 100));
 
     return {
-      name: subjectName,
-      accuracy,
+      name: subject.name,
+      slug: subject.slug,
+      total: subject.total,
       attempted,
-      total: totalBank,
-      progress,
+      accuracy,
+      progress: progressPercent,
     };
   });
 
+  // Recent Exams Table format
+  const recentExams = history.slice(0, 5).map((h, idx) => ({
+    id: h.id || `EX-${idx + 1}`,
+    subject: h.subjectName || h.category || 'Comprehensive Examination',
+    slug: h.slug || 'medicalSurgicalNursing',
+    questions: h.totalQuestions || h.total || 50,
+    score: h.score ?? 0,
+    date: h.date ? new Date(h.date).toLocaleDateString() : 'Today',
+    status: (h.score ?? 0) >= 75 ? 'Passed' : 'Needs Practice',
+  }));
+
+  // Activity stream based on actual test records
   const recentActivity = history.slice(0, 4).map((h) => ({
-    title: `Completed ${h.exam}`,
-    desc: `${h.score}% score on ${h.questions} items`,
-    time: h.date,
-    status: h.status,
+    title: `Completed ${h.subjectName || h.category || 'Practice Drill'}`,
+    desc: `Scored ${h.score ?? 0}% (${h.correctCount ?? 0}/${h.totalQuestions || h.total || 0} items) in ${h.mode || 'Simulation'}`,
+    time: h.date ? new Date(h.date).toLocaleDateString() : 'Just now',
   }));
 
   return {
-    profile,
+    profile: {
+      ...profile,
+      lastActiveDate,
+    },
     totalAnswered,
     overallAccuracy,
     examsCompleted,
+    streakDays,
     averageScore,
-    streakDays: profile.streakDays || 1,
     subjectBreakdown,
-    recentExams: history.slice(0, 6),
+    recentExams,
     recentActivity,
   };
-};
+}
 
-export const getPerformanceChartData = (timeframe = '7d') => {
-  const daysToShow = timeframe === '7d' ? 7 : timeframe === '30d' ? 14 : 30;
-  const history = getExamHistory();
-  const result = [];
-
-  for (let i = daysToShow - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
-
-    const matchingExams = history.filter((h) => h.date === dateStr);
-    if (matchingExams.length > 0) {
-      const count = matchingExams.reduce((sum, e) => sum + e.questions, 0);
-      const avgScore = Math.round(
-        matchingExams.reduce((sum, e) => sum + e.score, 0) / matchingExams.length
-      );
-      result.push({ day: dayLabel, count, accuracy: avgScore });
-    } else {
-      result.push({ day: dayLabel, count: 0, accuracy: 0 });
-    }
+export function getPerformanceChartData(timeframe = '7d') {
+  let history = [];
+  try {
+    history = JSON.parse(
+      localStorage.getItem('studyHistory') || 
+      localStorage.getItem('quizResults') || 
+      '[]'
+    );
+    if (!Array.isArray(history)) history = [];
+  } catch {
+    history = [];
   }
 
-  return result;
-};
+  const numDays = timeframe === '90d' ? 30 : timeframe === '30d' ? 14 : 7;
+  const days = [];
+
+  for (let i = numDays - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
+    const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' });
+
+    // Aggregate sessions that occurred on this specific date
+    const daySessions = history.filter((h) => (h.date || '').startsWith(dateStr));
+    const count = daySessions.reduce((sum, h) => sum + (h.totalQuestions || h.total || 0), 0);
+    const correct = daySessions.reduce((sum, h) => sum + (h.correctCount || 0), 0);
+    const accuracy = count > 0 ? Math.round((correct / count) * 100) : 0;
+
+    days.push({
+      day: dayLabel,
+      date: dateStr,
+      count,
+      accuracy,
+    });
+  }
+
+  return days;
+}

@@ -41,8 +41,7 @@ function Reveal({ children, className = '', delay = 0 }) {
 }
 
 // ---------------------------------------------------------------------------
-// Highlighted clinical cue — plain text until the hero's "cues" step, then
-// takes on a highlighted style. Purely presentational.
+// Highlighted clinical cue
 // ---------------------------------------------------------------------------
 function Cue({ active, children }) {
   return (
@@ -62,8 +61,11 @@ function Cue({ active, children }) {
 // ---------------------------------------------------------------------------
 // LOGIN MODAL — gates any action that requires an account.
 // ---------------------------------------------------------------------------
+// Find function LoginModal({ open, onClose }) in src/pages/public/HomePage.jsx
 function LoginModal({ open, onClose }) {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   useEffect(() => {
     if (!open) return undefined;
@@ -75,6 +77,25 @@ function LoginModal({ open, onClose }) {
       document.body.style.overflow = '';
     };
   }, [open, onClose]);
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+
+    // 1. Save user object to localStorage so Navbar & Dashboard recognize the candidate
+    const candidateUser = {
+      name: email.split('@')[0] || 'Candidate',
+      email: email,
+      token: 'demo-token-' + Date.now(),
+    };
+
+    localStorage.setItem('user', JSON.stringify(candidateUser));
+    localStorage.setItem('token', candidateUser.token);
+
+    // 2. Close modal & navigate to dashboard
+    onClose();
+    navigate('/dashboard');
+    window.location.reload(); // Refresh so navbar switches to candidate mode
+  };
 
   return (
     <AnimatePresence>
@@ -106,7 +127,7 @@ function LoginModal({ open, onClose }) {
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -115,16 +136,10 @@ function LoginModal({ open, onClose }) {
               Log in to continue
             </h2>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              Log in or create a free account to start practising and see the full question banks.
+              Log in to start practising and access the complete clinical question suite.
             </p>
 
-            <form
-              className="mt-6 space-y-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate('/login');
-              }}
-            >
+            <form className="mt-6 space-y-3" onSubmit={handleLoginSubmit}>
               <div className="space-y-1">
                 <label htmlFor="login-email" className="text-xs font-bold text-slate-700 block">
                   Email
@@ -133,8 +148,10 @@ function LoginModal({ open, onClose }) {
                   id="login-email"
                   type="email"
                   required
-                  placeholder="you@example.com"
-                  className="w-full px-3 py-2.5 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#071A3D] focus:border-transparent"
+                  placeholder="candidate@nursing.edu"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#071A3D] focus:border-transparent font-sans"
                 />
               </div>
 
@@ -147,28 +164,19 @@ function LoginModal({ open, onClose }) {
                   type="password"
                   required
                   placeholder="••••••••"
-                  className="w-full px-3 py-2.5 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#071A3D] focus:border-transparent"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#071A3D] focus:border-transparent font-sans"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-xs font-bold uppercase tracking-wider transition-colors"
+                className="w-full py-3 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
               >
-                Log In
+                Log In &amp; Launch
               </button>
             </form>
-
-            <p className="text-xs text-slate-500 mt-4 text-center">
-              New here?{' '}
-              <button
-                type="button"
-                onClick={() => navigate('/signup')}
-                className="text-[#071A3D] font-bold hover:underline"
-              >
-                Create an account
-              </button>
-            </p>
           </motion.div>
         </motion.div>
       )}
@@ -201,7 +209,7 @@ function useHeroTimeline() {
   const [stepIndex, setStepIndex] = useState(0);
 
   useEffect(() => {
-    if (shouldReduceMotion) return undefined; // stay on a single static frame
+    if (shouldReduceMotion) return undefined;
     const current = HERO_TIMELINE[stepIndex];
     const id = setTimeout(() => {
       setStepIndex((i) => (i + 1) % HERO_TIMELINE.length);
@@ -209,13 +217,12 @@ function useHeroTimeline() {
     return () => clearTimeout(id);
   }, [stepIndex, shouldReduceMotion]);
 
-  // Under reduced motion, park on the most informative frame (rationale open).
   const stageKey = shouldReduceMotion ? 'rationale' : HERO_TIMELINE[stepIndex].key;
   return stageKey;
 }
 
 // ---------------------------------------------------------------------------
-// SIMULATOR PREVIEW DATA (sample only — clearly labeled as a preview)
+// SIMULATOR PREVIEW DATA
 // ---------------------------------------------------------------------------
 const SIM_QUESTIONS = [
   {
@@ -274,7 +281,7 @@ export const HomePage = () => {
 
   // Hero autoplay
   const heroStage = useHeroTimeline();
-  const heroSelectedIndex = 0; // the demo always "selects" the correct option
+  const heroSelectedIndex = 0;
   const heroItemNumber = heroStage === 'update' ? 19 : 18;
   const cuesActive = heroStage !== 'assemble';
   const isSelected = ['select', 'reveal', 'rationale', 'update'].includes(heroStage);
@@ -282,7 +289,7 @@ export const HomePage = () => {
   const showRationale = ['rationale', 'update'].includes(heroStage);
   const showUpdateChip = heroStage === 'update';
 
-  // Hero card cursor tilt (independent of the autoplay state machine)
+  // Hero card cursor tilt
   const heroCardRef = useRef(null);
   const [heroTilt, setHeroTilt] = useState({ x: 0, y: 0 });
 
@@ -298,7 +305,7 @@ export const HomePage = () => {
   const handleHeroMouseLeave = () => setHeroTilt({ x: 0, y: 0 });
 
   // ---------------------------------------------------------------------
-  // Simulator preview — fully interactive: select -> submit -> reveal -> next
+  // Simulator preview
   // ---------------------------------------------------------------------
   const [simIndex, setSimIndex] = useState(0);
   const [simSelected, setSimSelected] = useState(null);
@@ -367,7 +374,7 @@ export const HomePage = () => {
       a: 'Yes. Timed mode gives you 72 seconds per question, matching the pace of a real computerized licensing exam.',
     },
     {
-      q: 'What\u2019s the difference between Tutor mode and Timed mode?',
+      q: 'What’s the difference between Tutor mode and Timed mode?',
       a: 'Tutor mode shows you the explanation right after you answer. Timed mode holds the explanations back until you finish, so you can test yourself under real pressure.',
     },
     {
@@ -417,7 +424,7 @@ export const HomePage = () => {
                 <button
                   type="button"
                   onClick={openLoginModal}
-                  className="px-6 py-3.5 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 active:scale-98 shadow-xs"
+                  className="px-6 py-3.5 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 active:scale-98 shadow-xs cursor-pointer"
                 >
                   <span>Start Practising</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -426,7 +433,7 @@ export const HomePage = () => {
                 <button
                   type="button"
                   onClick={openLoginModal}
-                  className="px-6 py-3.5 rounded bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold uppercase tracking-wider transition-all"
+                  className="px-6 py-3.5 rounded bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
                   See All Subjects
                 </button>
@@ -613,7 +620,7 @@ export const HomePage = () => {
             </div>
           </Reveal>
         </section>
-              {/* after the status strip section, before the pathway section */}
+
         <Reveal>
           <QuestionOfTheDay />
         </Reveal>
@@ -715,7 +722,7 @@ export const HomePage = () => {
                     <button
                       type="button"
                       onClick={openLoginModal}
-                      className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1.5"
+                      className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>Open this case</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -815,7 +822,7 @@ export const HomePage = () => {
                         type="button"
                         onClick={handleSimSubmit}
                         disabled={simSelected === null}
-                        className="w-full sm:w-auto px-6 py-3 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-sm font-bold disabled:bg-slate-200 disabled:text-slate-400 transition-colors"
+                        className="w-full sm:w-auto px-6 py-3 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-sm font-bold disabled:bg-slate-200 disabled:text-slate-400 transition-colors cursor-pointer"
                       >
                         Submit answer
                       </button>
@@ -848,7 +855,7 @@ export const HomePage = () => {
                         <button
                           type="button"
                           onClick={handleSimNext}
-                          className="px-6 py-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold flex items-center gap-2"
+                          className="px-6 py-3 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold flex items-center gap-2 cursor-pointer"
                         >
                           Next question <ArrowRight className="w-4 h-4" />
                         </button>
@@ -939,7 +946,7 @@ export const HomePage = () => {
                     <button
                       type="button"
                       onClick={openLoginModal}
-                      className="mt-2 text-xs font-bold text-amber-400 hover:text-amber-300 underline block font-mono"
+                      className="mt-2 text-xs font-bold text-amber-400 hover:text-amber-300 underline block font-mono cursor-pointer"
                     >
                       Start these questions →
                     </button>
@@ -952,7 +959,7 @@ export const HomePage = () => {
                     <button
                       type="button"
                       onClick={openLoginModal}
-                      className="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded text-xs transition-colors"
+                      className="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded text-xs transition-colors cursor-pointer"
                     >
                       Resume
                     </button>
@@ -983,7 +990,7 @@ export const HomePage = () => {
                     <button
                       type="button"
                       onClick={() => setActiveFaq(isOpen ? -1 : index)}
-                      className="w-full text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-blue-700 transition-colors"
+                      className="w-full text-left flex items-center justify-between gap-4 font-bold text-slate-900 text-sm sm:text-base hover:text-blue-700 transition-colors cursor-pointer"
                     >
                       <span>{faq.q}</span>
                       {isOpen ? (
@@ -1032,7 +1039,7 @@ export const HomePage = () => {
                 <button
                   type="button"
                   onClick={openLoginModal}
-                  className="px-6 py-3.5 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs active:scale-98"
+                  className="px-6 py-3.5 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs active:scale-98 cursor-pointer"
                 >
                   <span>Start Practising</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1041,7 +1048,7 @@ export const HomePage = () => {
                 <button
                   type="button"
                   onClick={openLoginModal}
-                  className="px-6 py-3.5 rounded border border-slate-700 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider transition-all"
+                  className="px-6 py-3.5 rounded border border-slate-700 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
                   See All Subjects
                 </button>

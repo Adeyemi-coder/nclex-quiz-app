@@ -1,7 +1,6 @@
 // src/components/Quiz/Quiz.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { recordExamAttempt } from '../../services/studentStorage';
 import { 
   Clock, 
   CheckCircle2, 
@@ -13,14 +12,19 @@ import {
   AlertCircle, 
   LayoutGrid, 
   CheckSquare, 
-  Pause
+  Pause 
 } from 'lucide-react';
-import { COURSE_REGISTRY } from '../../data/coursesIndex.js';
+
+import * as coursesModule from '../../data/coursesIndex.js';
+import * as questionsModule from '../../data/questions.js';
 import { selectAdaptiveExamSet, shuffleQuestionOptions } from '../../utils/selectionEngine.js';
 import QuestionNavigatorModal from './QuestionNavigatorModal.jsx';
 import TimeWarningBanner from './TimeWarningBanner.jsx';
 import PauseExamModal from './PauseExamModal.jsx';
-import { questions as allQuestions } from '../../data/questions.js';
+
+// Safe resolution of data exports
+const COURSE_REGISTRY = coursesModule.COURSE_REGISTRY || coursesModule.default || {};
+const allQuestions = questionsModule.questions || questionsModule.default || [];
 
 export default function Quiz() {
   const { category } = useParams();
@@ -29,7 +33,7 @@ export default function Quiz() {
 
   const config = location.state?.config;
 
-  // 1. Question Set Slicing with Comprehensive Multi-Strategy Resolution
+  // 1. Question Set Slicing with Multi-Strategy Resolution
   const activeQuestions = useMemo(() => {
     // Priority A: Custom generated questions (AI drills or custom mocks)
     if (location.state?.customQuestions?.length > 0) {
@@ -43,7 +47,6 @@ export default function Quiz() {
     let courseData = COURSE_REGISTRY ? COURSE_REGISTRY[targetCourseKey] : null;
 
     if (!courseData && COURSE_REGISTRY) {
-      // Find matching key case-insensitively or by alias
       const matchingKey = Object.keys(COURSE_REGISTRY).find((key) => {
         const k = key.toLowerCase();
         return k === cleanParam || 
@@ -60,7 +63,7 @@ export default function Quiz() {
       return selectAdaptiveExamSet(targetCourseKey, courseData.questions, attemptCount);
     }
 
-    // Priority C: Universal Database Filter matching both slug, category, and subject keywords
+    // Priority C: Universal Database Filter matching slug, category, and subject keywords
     if (!Array.isArray(allQuestions) || allQuestions.length === 0) {
       return [];
     }
@@ -75,10 +78,8 @@ export default function Quiz() {
       const qSub = (q.subCategory || q.subtopic || q.topic || '').toLowerCase().trim();
       const combined = `${qCat} ${qSub}`;
 
-      // 1. Exact string match
       if (qCat === cleanParam) return true;
 
-      // 2. Keyword/slug match for all 19 NMCN courses & modules
       if (cleanParam.includes('medicalsurgical') || cleanParam.includes('medsurg')) {
         return combined.includes('medical') || combined.includes('surgical') || combined.includes('med-surg');
       }
@@ -137,7 +138,6 @@ export default function Quiz() {
         return combined.includes('politic') || combined.includes('policy') || combined.includes('management') || combined.includes('leadership');
       }
 
-      // Specialty Modules
       if (cleanParam.includes('cardio')) return combined.includes('cardio') || combined.includes('hemodynamic');
       if (cleanParam.includes('respiratory')) return combined.includes('respiratory') || combined.includes('abg') || combined.includes('ventilation');
       if (cleanParam.includes('dosage')) return combined.includes('dosage') || combined.includes('calculation') || combined.includes('drip');
@@ -155,22 +155,31 @@ export default function Quiz() {
   // 2. Exam States
   const [currentIdx, setCurrentIdx] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
-  const [savedItems, setSavedItems] = useState([]);
   const [examMode, setExamMode] = useState(config?.examMode || 'tutor');
   const [isSubmitted, setIsSubmitted] = useState(false);
-  
+  const [sataSubmittedMap, setSataSubmittedMap] = useState({});
+
+  // Initialize saved bookmarks from localStorage
+  const [savedItems, setSavedItems] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('nclex_bookmarked_questions') || '[]');
+      return stored.map((b) => b.id || b.question);
+    } catch {
+      return [];
+    }
+  });
+
   const initialTime = useMemo(() => {
     const cadence = config?.secondsPerQuestion || 72;
     return (activeQuestions.length || 50) * cadence;
   }, [config, activeQuestions]);
-  
+
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [struckOptions, setStruckOptions] = useState({});
   const [showNavigator, setShowNavigator] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
 
-  // Sync mode and timer if config or question pool changes dynamically
   useEffect(() => {
     if (config?.examMode) {
       setExamMode(config.examMode);
@@ -181,7 +190,7 @@ export default function Quiz() {
     }
   }, [config, activeQuestions]);
 
-  // 3. Question Schema & Normalization
+  // 3. Question Normalization
   const currentQ = activeQuestions[currentIdx] || {};
   const questionOptions = useMemo(() => {
     return currentQ.options || currentQ.choices || currentQ.answers || [];
@@ -193,10 +202,25 @@ export default function Quiz() {
     return Array.isArray(val);
   }, [currentQ]);
 
-  // Normalizes numbers, letters, digit strings, or exact option text into numeric indices
+  const currentIdentifier = useMemo(() => {
+    return currentQ.id || `q-${currentIdx}-${currentQ.question?.slice(0, 25)}`;
+  }, [currentQ, currentIdx]);
+
+  const isBookmarked = useMemo(() => {
+    return (
+      savedItems.includes(currentIdx) ||
+      savedItems.includes(currentIdentifier) ||
+      savedItems.includes(currentQ.question)
+    );
+  }, [savedItems, currentIdx, currentIdentifier, currentQ]);
+
   const correctOptionIndices = useMemo(() => {
     const raw = currentQ.correctAnswer ?? currentQ.correct ?? currentQ.answer ?? currentQ.correctOption;
-    const opts = questionOptions.map((o) => (typeof o === 'string' ? o.trim().toLowerCase() : ''));
+    const opts = questionOptions.map((o) => {
+      if (typeof o === 'string') return o.trim().toLowerCase();
+      if (o && typeof o === 'object') return (o.text || o.label || '').trim().toLowerCase();
+      return '';
+    });
 
     const resolveItem = (val) => {
       if (val === undefined || val === null) return null;
@@ -228,7 +252,9 @@ export default function Quiz() {
 
   const currentAnswer = userAnswers[currentIdx];
   const hasAnswered = isSATA
-    ? Array.isArray(currentAnswer) && currentAnswer.length > 0
+    ? examMode === 'tutor' 
+      ? Boolean(sataSubmittedMap[currentIdx])
+      : Array.isArray(currentAnswer) && currentAnswer.length > 0
     : currentAnswer !== undefined;
 
   const isCorrect = useMemo(() => {
@@ -256,10 +282,11 @@ export default function Quiz() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [examMode, isSubmitted, isPaused]);
+  }, [examMode, isSubmitted, isPaused, activeQuestions, userAnswers]);
 
   function handleSelectOption(optionIndex) {
     if (examMode === 'tutor' && hasAnswered && !isSATA) return;
+    if (examMode === 'tutor' && isSATA && sataSubmittedMap[currentIdx]) return;
 
     if (isSATA) {
       const currentSelected = Array.isArray(userAnswers[currentIdx])
@@ -292,15 +319,48 @@ export default function Quiz() {
     });
   }
 
+  // Persistent Bookmark Toggle
   function toggleBookmark() {
-    setSavedItems((prev) =>
-      prev.includes(currentIdx)
-        ? prev.filter((i) => i !== currentIdx)
-        : [...prev, currentIdx]
-    );
+    if (!currentQ.question && !currentQ.stem) return;
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('nclex_bookmarked_questions') || '[]');
+      const alreadySaved = existing.some(
+        (b) => (b.id && b.id === currentIdentifier) || b.question === currentQ.question
+      );
+
+      let updatedList;
+      if (alreadySaved) {
+        updatedList = existing.filter(
+          (b) => (b.id ? b.id !== currentIdentifier : b.question !== currentQ.question)
+        );
+        setSavedItems((prev) =>
+          prev.filter((item) => item !== currentIdentifier && item !== currentIdx && item !== currentQ.question)
+        );
+      } else {
+        const bookmarkPayload = {
+          id: currentIdentifier,
+          question: currentQ.question || currentQ.stem,
+          options: questionOptions,
+          correctAnswer: currentQ.correctAnswer ?? currentQ.correct ?? currentQ.answer,
+          rationale: currentQ.rationale || currentQ.explanation,
+          clinicalPearl: currentQ.clinicalPearl,
+          category: currentQ.category || currentQ.subject || courseDisplayName,
+          topic: currentQ.topic || 'Clinical Nursing Judgment',
+          type: currentQ.type || (isSATA ? 'sata' : 'single'),
+          savedAt: new Date().toISOString(),
+        };
+        updatedList = [bookmarkPayload, ...existing];
+        setSavedItems((prev) => [...prev, currentIdentifier, currentIdx]);
+      }
+
+      localStorage.setItem('nclex_bookmarked_questions', JSON.stringify(updatedList));
+    } catch (err) {
+      console.error('Failed to update bookmarks in storage:', err);
+    }
   }
 
-  // 5. Final Submission & Storage Telemetry
+  // 5. Final Submission & Telemetry Storage
   function handleFinalSubmit() {
     setIsSubmitted(true);
 
@@ -309,10 +369,16 @@ export default function Quiz() {
 
     activeQuestions.forEach((q, idx) => {
       const val = q.correctAnswer ?? q.correct ?? q.answer ?? q.correctOption;
-      const isQuesSATA = q.type === 'sata' || Array.isArray(val);
+      const isQuesSATA = q.type === 'sata' || q.type === 'multiple-response' || Array.isArray(val);
       const userSelected = userAnswers[idx];
 
-      const opts = (q.options || q.choices || []).map((o) => (typeof o === 'string' ? o.trim().toLowerCase() : ''));
+      const rawOpts = q.options || q.choices || q.answers || [];
+      const opts = rawOpts.map((o) => {
+        if (typeof o === 'string') return o.trim().toLowerCase();
+        if (o && typeof o === 'object') return (o.text || o.label || '').trim().toLowerCase();
+        return '';
+      });
+
       const resolveItem = (v) => {
         if (v === undefined || v === null) return null;
         if (typeof v === 'number') return v;
@@ -383,43 +449,101 @@ export default function Quiz() {
     const totalTimeAllowed = (activeQuestions.length || 50) * (config?.secondsPerQuestion || 72);
     const timeSpentSeconds = Math.max(0, totalTimeAllowed - timeLeft);
 
-    try {
-      recordExamAttempt({
-        subjectName: sessionCategory,
-        slug: category || 'fundamentals',
-        score: percentageScore,
-        totalQuestions: activeQuestions.length,
-        correctCount: calculatedScore,
-        timeSpentSeconds: timeSpentSeconds,
-        mode: examMode === 'timed' ? 'Timed Exam' : 'Tutor Mode',
-        missedQuestions: missedQuestionsList,
-      });
-    } catch (e) {
-      console.warn('Could not record student profile telemetry:', e);
-    }
-
-    const historyRecord = {
-      id: Date.now(),
-      date: new Date().toISOString(),
-      category: sessionCategory,
-      courseId: category,
-      score: calculatedScore,
-      total: activeQuestions.length,
-      mode: examMode,
+    const formatDuration = (secs) => {
+      const mins = Math.floor(secs / 60);
+      const rem = secs % 60;
+      return `${mins}m ${rem}s`;
     };
 
+    const nowIso = new Date().toISOString();
+    const sessionRecord = {
+      id: `exam-${Date.now()}`,
+      date: nowIso,
+      category: sessionCategory,
+      subjectName: sessionCategory,
+      slug: category || 'fundamentals',
+      score: percentageScore,
+      correctCount: calculatedScore,
+      total: activeQuestions.length,
+      totalQuestions: activeQuestions.length,
+      timeSpent: formatDuration(timeSpentSeconds),
+      timeSpentSeconds: timeSpentSeconds,
+      mode: examMode === 'timed' ? 'Timed Exam' : 'Tutor Mode',
+      missedQuestions: missedQuestionsList,
+    };
+
+    // 1. Sync to studyHistory & quizResults
     try {
-      const existing = JSON.parse(localStorage.getItem('nclex_quiz_history') || '[]');
-      localStorage.setItem('nclex_quiz_history', JSON.stringify([historyRecord, ...existing]));
+      const existingHistory = JSON.parse(localStorage.getItem('studyHistory') || '[]');
+      localStorage.setItem('studyHistory', JSON.stringify([sessionRecord, ...existingHistory]));
     } catch (e) {
-      console.error('Failed to save session history:', e);
+      console.warn('Could not write to studyHistory', e);
     }
 
+    try {
+      const existingQuizResults = JSON.parse(localStorage.getItem('quizResults') || '[]');
+      localStorage.setItem('quizResults', JSON.stringify([sessionRecord, ...existingQuizResults]));
+    } catch (e) {
+      console.warn('Could not write to quizResults', e);
+    }
+
+    try {
+      const existingLegacy = JSON.parse(localStorage.getItem('nclex_quiz_history') || '[]');
+      localStorage.setItem('nclex_quiz_history', JSON.stringify([sessionRecord, ...existingLegacy]));
+    } catch (e) {
+      console.warn('Could not write to nclex_quiz_history', e);
+    }
+
+    // 2. Sync to nclex_user_progress
+    try {
+      const rawUserProg = localStorage.getItem('nclex_user_progress');
+      const prog = rawUserProg ? JSON.parse(rawUserProg) : {
+        totalAnswered: 0,
+        totalCorrect: 0,
+        streakDays: 1,
+        lastStudyDate: null,
+        totalTimeSpentSec: 0,
+        history: [],
+        byCategory: {}
+      };
+
+      const today = nowIso.split('T')[0];
+      const catStats = prog.byCategory[sessionCategory] || { answered: 0, correct: 0 };
+      
+      const updatedProg = {
+        ...prog,
+        totalAnswered: (prog.totalAnswered || 0) + activeQuestions.length,
+        totalCorrect: (prog.totalCorrect || 0) + calculatedScore,
+        lastStudyDate: today,
+        totalTimeSpentSec: (prog.totalTimeSpentSec || 0) + timeSpentSeconds,
+        history: [sessionRecord, ...(prog.history || [])],
+        byCategory: {
+          ...prog.byCategory,
+          [sessionCategory]: {
+            answered: catStats.answered + activeQuestions.length,
+            correct: catStats.correct + calculatedScore
+          }
+        }
+      };
+
+      localStorage.setItem('nclex_user_progress', JSON.stringify(updatedProg));
+    } catch (e) {
+      console.warn('Could not update nclex_user_progress', e);
+    }
+
+    // 3. Build Detailed Review List for ResultsView
     const reviewList = activeQuestions.map((q, idx) => {
       const selected = userAnswers[idx];
-      const opts = q.options || q.choices || [];
+      const rawOptions = q.options || q.choices || q.answers || [];
+      
+      const optionTexts = rawOptions.map((opt) => {
+        if (typeof opt === 'string') return opt;
+        if (opt && typeof opt === 'object') return opt.text || opt.label || '';
+        return String(opt);
+      });
+
       const val = q.correctAnswer ?? q.correct ?? q.answer ?? q.correctOption;
-      const isThisQuesSATA = q.type === 'sata' || Array.isArray(val);
+      const isThisQuesSATA = q.type === 'sata' || q.type === 'multiple-response' || Array.isArray(val);
 
       const resolveSingle = (v) => {
         if (typeof v === 'number') return v;
@@ -438,47 +562,68 @@ export default function Quiz() {
         qCorrectIndices = [resolveSingle(val)];
       }
 
-      const isAnsCorrect = isThisQuesSATA
-        ? Array.isArray(selected) && selected.length === qCorrectIndices.length && selected.every((i) => qCorrectIndices.includes(i))
-        : selected === qCorrectIndices[0];
+      let isAnsCorrect = false;
+      if (isThisQuesSATA) {
+        const userPicks = Array.isArray(selected) ? selected : [];
+        isAnsCorrect =
+          userPicks.length === qCorrectIndices.length &&
+          userPicks.every((i) => qCorrectIndices.includes(i));
+      } else {
+        isAnsCorrect = selected !== undefined && selected === qCorrectIndices[0];
+      }
+
+      const formatSelectedText = () => {
+        if (selected === undefined || selected === null) return 'Unanswered / Skipped';
+        if (Array.isArray(selected)) {
+          if (selected.length === 0) return 'Unanswered / Skipped';
+          return selected
+            .map((i) => `${String.fromCharCode(65 + i)}. ${optionTexts[i] || ''}`)
+            .join(' | ');
+        }
+        return `${String.fromCharCode(65 + selected)}. ${optionTexts[selected] || ''}`;
+      };
+
+      const formatCorrectText = () => {
+        return qCorrectIndices
+          .map((i) => `${String.fromCharCode(65 + i)}. ${optionTexts[i] || ''}`)
+          .join(' | ');
+      };
 
       return {
         id: q.id || `ITEM-${idx + 1}`,
         question: q.question || q.stem,
-        userAnswer: Array.isArray(selected)
-          ? selected.map((i) => opts[i]).join(', ') || 'No answer'
-          : opts[selected] || 'No answer',
-        correctAnswerText: qCorrectIndices.map((i) => opts[i]).join(', '),
+        options: optionTexts,
+        rawSelected: selected,
+        correctIndices: qCorrectIndices,
+        userAnswer: formatSelectedText(),
+        correctAnswerText: formatCorrectText(),
         isCorrect: isAnsCorrect,
+        isSATA: isThisQuesSATA,
         rationale: q.rationale || q.explanation,
         clinicalPearl: q.clinicalPearl,
       };
     });
 
-    const formatDuration = (secs) => {
-      const mins = Math.floor(secs / 60);
-      const rem = secs % 60;
-      return `${mins}m ${rem}s`;
+    const resultsData = {
+      score: percentageScore,
+      totalQuestions: activeQuestions.length,
+      correctCount: calculatedScore,
+      incorrectCount: activeQuestions.length - calculatedScore,
+      timeSpent: formatDuration(timeSpentSeconds),
+      subject: sessionCategory,
+      categorySlug: category,
+      reviewList: reviewList,
+      mode: examMode === 'timed' ? 'Timed Exam' : 'Tutor Mode',
+      missedQuestions: missedQuestionsList,
     };
 
-    const navigationPayload = {
-      state: {
-        score: percentageScore,
-        totalQuestions: activeQuestions.length,
-        correctCount: calculatedScore,
-        incorrectCount: activeQuestions.length - calculatedScore,
-        timeSpent: formatDuration(timeSpentSeconds),
-        subject: sessionCategory,
-        categorySlug: category,
-        reviewList: reviewList,
-        mode: examMode,
-        missedQuestions: missedQuestionsList,
-        questions: activeQuestions,
-        userAnswers: userAnswers,
-      },
-    };
+    try {
+      localStorage.setItem('nclex_last_result', JSON.stringify(resultsData));
+    } catch (e) {
+      console.warn('Could not save last result fallback', e);
+    }
 
-    navigate('/results', navigationPayload);
+    navigate('/results', { state: resultsData, replace: true });
   }
 
   const formatTime = (secs) => {
@@ -517,13 +662,22 @@ export default function Quiz() {
       {/* Top Telemetry & Tools Bar */}
       <div className="mb-8 flex items-center justify-between border-b border-[#DDD9CC] pb-4">
         
-        {/* Left: Item Counter & Course Identification */}
+        {/* Left: Home Return, Item Counter & Course Identification */}
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            title="Exit exam and return Home"
+            className="flex items-center gap-1.5 text-xs font-bold text-[#1D2A59] hover:underline cursor-pointer"
+          >
+            <span>← Home</span>
+          </button>
+          <span className="text-[#DDD9CC]">•</span>
           <span className="font-mono text-xs font-bold tracking-wider text-[#1D2A59]">
             ITEM {currentIdx + 1} OF {activeQuestions.length}
           </span>
           <span className="text-[#DDD9CC]">•</span>
-          <span className="text-xs font-medium text-[#62697A] truncate max-w-[200px] sm:max-w-none">
+          <span className="text-xs font-medium text-[#62697A] truncate max-w-[160px] sm:max-w-none">
             {courseDisplayName}
           </span>
         </div>
@@ -588,9 +742,9 @@ export default function Quiz() {
           <button
             type="button"
             onClick={toggleBookmark}
-            title={savedItems.includes(currentIdx) ? 'Bookmarked' : 'Bookmark item'}
+            title={isBookmarked ? 'Bookmarked' : 'Bookmark item'}
             className={`flex h-8 w-8 items-center justify-center rounded border transition-colors cursor-pointer ${
-              savedItems.includes(currentIdx)
+              isBookmarked
                 ? 'border-[#B89A5A] bg-[#B89A5A] text-white'
                 : 'border-[#DDD9CC] bg-[#FBF8EF] text-[#62697A] hover:border-[#1D2A59] hover:text-[#1D2A59]'
             }`}
@@ -600,7 +754,7 @@ export default function Quiz() {
         </div>
       </div>
 
-      {/* Pacing Banner (< 5 min remaining in timed mode) */}
+      {/* Pacing Warning Banner (< 5 min remaining) */}
       <TimeWarningBanner
         timeLeft={timeLeft}
         isVisible={examMode === 'timed' && timeLeft <= 300 && !warningDismissed && !isSubmitted}
@@ -628,7 +782,7 @@ export default function Quiz() {
           </p>
         )}
 
-        {/* Option Selection List with Visual Feedback */}
+        {/* Option Selection List */}
         <div className="mt-6 space-y-3">
           {questionOptions.map((option, idx) => {
             const letter = String.fromCharCode(65 + idx);
@@ -637,6 +791,8 @@ export default function Quiz() {
               : currentAnswer === idx;
             const isStruck = (struckOptions[currentIdx] || []).includes(idx);
             const isOptionCorrect = correctOptionIndices.includes(idx);
+
+            const optText = typeof option === 'string' ? option : option?.text || option?.label || String(option);
 
             let rowStyle = 'border border-[#DDD9CC] bg-[#FBF8EF] hover:border-[#62697A] text-[#202535]';
             let badgeStyle = 'text-[#62697A] border-[#DDD9CC] bg-[#F4EEDC]';
@@ -681,7 +837,7 @@ export default function Quiz() {
                       isStruck ? 'line-through text-slate-400 opacity-60' : ''
                     }`}
                   >
-                    {option}
+                    {optText}
                   </span>
                 </div>
 
@@ -701,6 +857,20 @@ export default function Quiz() {
             );
           })}
         </div>
+
+        {/* SATA Tutor Mode Check Button */}
+        {examMode === 'tutor' && isSATA && !sataSubmittedMap[currentIdx] && (
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              disabled={!Array.isArray(currentAnswer) || currentAnswer.length === 0}
+              onClick={() => setSataSubmittedMap((prev) => ({ ...prev, [currentIdx]: true }))}
+              className="px-4 py-2 rounded bg-[#1D2A59] text-white text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#283A78] cursor-pointer"
+            >
+              Confirm Choices &amp; Check Answer
+            </button>
+          </div>
+        )}
 
         {/* Tutor Rationale Drawer */}
         {examMode === 'tutor' && hasAnswered && (

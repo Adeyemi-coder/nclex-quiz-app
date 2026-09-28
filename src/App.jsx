@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 
@@ -11,29 +11,49 @@ import { DashboardLayout } from './layouts/DashboardLayout';
 import { HomePage } from './pages/public/HomePage';
 import { AboutPage } from './pages/public/AboutPage';
 import { FeaturesPage } from './pages/public/FeaturesPage';
+import { ExamsListingPage } from './pages/dashboard/ExamsListingPage';
 import { PricingPage } from './pages/public/PricingPage';
 import { TeamPage } from './pages/public/TeamPage';
 import { ContactPage } from './pages/public/ContactPage';
 import { LoginPage } from './pages/public/LoginPage';
 
-
 // Authenticated Learner Dashboard Pages
 import { DashboardHome } from './pages/dashboard/DashboardHome';
-import { ExamsListingPage } from './pages/dashboard/ExamsListingPage';
 import { ProgressPage } from './pages/dashboard/ProgressPage';
 import { BookmarksPage } from './pages/dashboard/BookmarksPage';
-import { ClinicalSimulatorPage } from './pages/dashboard/ClinicalSimulatorPage'
 import { StudyHistoryPage } from './pages/dashboard/StudyHistoryPage';
+import StudyGuidePage from './pages/dashboard/StudyGuidePage';
 import { ProfileSettingsPage } from './pages/dashboard/ProfileSettingsPage';
-
 
 // Core Examination Runner & Review Components
 import Quiz from './components/Quiz/Quiz';
 import ResultsView from './components/Quiz/ResultsView';
 
+// Splash (adjust this path if your file lives somewhere else)
+import SplashScreen from './components/Splash/SplashScreen';
+
 export default function App() {
+  // Show the splash once per browser session
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      return sessionStorage.getItem('splash_seen') !== '1';
+    } catch {
+      return true;
+    }
+  });
+
+  const handleSplashFinish = useCallback(() => {
+    try {
+      sessionStorage.setItem('splash_seen', '1');
+    } catch {
+      // storage unavailable: splash simply shows again next load
+    }
+    setShowSplash(false);
+  }, []);
+
   return (
     <AuthProvider>
+      {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
       <Routes>
         {/* 1. Public Marketing Shell */}
         <Route element={<MarketingLayout />}>
@@ -51,11 +71,10 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardHome />} />
           <Route path="exams" element={<ExamsListingPage />} />
-          <Route path="subjects" element={<ExamsListingPage />} />
-          <Route path="practice" element={<ExamsListingPage />} />
           <Route path="progress" element={<ProgressPage />} />
           <Route path="bookmarks" element={<BookmarksPage />} />
           <Route path="history" element={<StudyHistoryPage />} />
+          <Route path="study-guide" element={<StudyGuidePage />} />
           <Route path="settings" element={<ProfileSettingsPage />} />
         </Route>
 

@@ -3,121 +3,91 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-const DEFAULT_CANDIDATE = {
-  id: 'cand-001',
-  name: 'Adeyemi Kehinde',
-  email: 'adeyemi@clinicalmaster.com',
-  indexNumber: 'NMCN/UITH/2026/0491',
-  targetExam: 'NMCN RN Professional Exam',
-  joinedDate: '2026-08-01',
-};
-
 export const AuthProvider = ({ children }) => {
+  // 1. Read initial user safely from localStorage
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const active = localStorage.getItem('nclex_active_session');
-      return active ? JSON.parse(active) : DEFAULT_CANDIDATE;
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return DEFAULT_CANDIDATE;
+      return null;
     }
   });
 
-  const [registeredUsers, setRegisteredUsers] = useState(() => {
+  // 2. Persistent theme state ('light' | 'dark')
+  const [theme, setTheme] = useState(() => {
     try {
-      const users = localStorage.getItem('nclex_registered_users');
-      return users ? JSON.parse(users) : [DEFAULT_CANDIDATE];
+      return localStorage.getItem('app_theme') || 'light';
     } catch {
-      return [DEFAULT_CANDIDATE];
+      return 'light';
     }
   });
 
+  // Sync theme with the DOM's <html> root element
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('nclex_active_session', JSON.stringify(currentUser));
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
     } else {
-      localStorage.removeItem('nclex_active_session');
+      root.classList.remove('dark');
     }
-  }, [currentUser]);
-
-  // Strict Login: Rejects unregistered emails
-  const login = (email, password) => {
-    const trimmedEmail = email.trim().toLowerCase();
-    const existing = registeredUsers.find(
-      (u) => u.email.toLowerCase() === trimmedEmail
-    );
-
-    if (!existing) {
-      return { 
-        success: false, 
-        message: 'No candidate record found for this email. Please register first.' 
-      };
+    try {
+      localStorage.setItem('app_theme', theme);
+    } catch (e) {
+      console.warn('Unable to persist theme to localStorage', e);
     }
+  }, [theme]);
 
-    if (existing.password && password && existing.password !== password) {
-      return {
-        success: false,
-        message: 'Invalid password. Please check your credentials.'
-      };
-    }
-
-    setCurrentUser(existing);
-    return { success: true };
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Registration: Stores credentials
-  const register = ({ name, email, password, targetExam, indexNumber }) => {
-    const trimmedEmail = email.trim().toLowerCase();
-    const existing = registeredUsers.find(
-      (u) => u.email.toLowerCase() === trimmedEmail
-    );
+  const isAuthenticated = Boolean(currentUser);
 
-    if (existing) {
-      return {
-        success: false,
-        message: 'An account with this candidate email already exists. Please sign in.'
-      };
-    }
-
-    const newUser = {
-      id: `cand-${Date.now()}`,
-      name: name.trim(),
-      email: trimmedEmail,
-      password: password || '',
-      indexNumber: indexNumber?.trim() || `NMCN/CAND/${Math.floor(1000 + Math.random() * 9000)}`,
-      targetExam: targetExam || 'NMCN RN Professional Exam',
-      joinedDate: new Date().toISOString().split('T')[0],
+  // Login handler
+  const login = (userData) => {
+    const userToSave = {
+      name: userData?.name || userData?.email?.split('@')[0] || 'Candidate',
+      email: userData?.email || '',
+      token: userData?.token || `token-${Date.now()}`
     };
 
-    const updated = [...registeredUsers, newUser];
-    setRegisteredUsers(updated);
-    localStorage.setItem('nclex_registered_users', JSON.stringify(updated));
-    setCurrentUser(newUser);
-    return { success: true };
+    localStorage.setItem('user', JSON.stringify(userToSave));
+    localStorage.setItem('token', userToSave.token);
+    setCurrentUser(userToSave);
   };
 
+  // Logout handler
   const logout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    sessionStorage.clear();
     setCurrentUser(null);
   };
 
-  const updateProfile = (data) => {
-    const updated = { ...currentUser, ...data };
-    setCurrentUser(updated);
-    const updatedList = registeredUsers.map((u) =>
-      u.id === updated.id ? updated : u
-    );
-    setRegisteredUsers(updatedList);
-    localStorage.setItem('nclex_registered_users', JSON.stringify(updatedList));
+  // Update profile data in real-time across all components
+  const updateUser = (updatedFields) => {
+    setCurrentUser((prev) => {
+      const updated = { ...(prev || {}), ...updatedFields };
+      try {
+        localStorage.setItem('user', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Unable to persist updated user to localStorage', e);
+      }
+      return updated;
+    });
   };
 
   return (
     <AuthContext.Provider
       value={{
         currentUser,
-        isAuthenticated: !!currentUser,
+        isAuthenticated,
         login,
-        register,
         logout,
-        updateProfile,
+        updateUser,
+        theme,
+        toggleTheme
       }}
     >
       {children}
@@ -125,6 +95,20 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Ensure both of these exports exist at the bottom:
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    return {
+      currentUser: null,
+      isAuthenticated: false,
+      login: () => {},
+      logout: () => {},
+      updateUser: () => {},
+      theme: 'light',
+      toggleTheme: () => {}
+    };
+  }
+  return context;
+};
+
 export default AuthContext;
