@@ -328,7 +328,8 @@ export const MarketingLayout = () => {
       </motion.header>
 
       {/* Main Outlet */}
-      <main className="flex-1 pb-24 lg:pb-0">
+      {/* Bottom padding for the mobile bar only matters once that bar actually renders (signed-in users) */}
+      <main className={`flex-1 ${isAuthenticated ? 'pb-24 lg:pb-0' : 'pb-0'}`}>
         <Outlet />
       </main>
 
@@ -423,93 +424,90 @@ export const MarketingLayout = () => {
       </footer>
 
       {/* ========================================================= */}
-      {/* MOBILE-ONLY BOTTOM NAVIGATION BAR (Strictly hidden on lg) */}
+      {/* MOBILE-ONLY BOTTOM NAVIGATION BAR (Strictly hidden on lg,  */}
+      {/* and now hidden entirely until the candidate is signed in) */}
       {/* ========================================================= */}
-      <nav
-        aria-label="Mobile Bottom Navigation"
-        className="fixed bottom-0 left-0 right-0 z-[99999] bg-white border-t border-slate-200/90 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] flex lg:hidden items-center justify-around h-[62px] w-full"
-      >
-        <Link
-          to="/"
-          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
-            location.pathname === '/' ? 'text-[#071A3D]' : 'text-slate-400'
-          }`}
+      {isAuthenticated && (
+        <nav
+          aria-label="Mobile Bottom Navigation"
+          className="fixed bottom-0 left-0 right-0 z-[99999] bg-white border-t border-slate-200/90 shadow-[0_-2px_10px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)] flex lg:hidden items-center justify-around h-[62px] w-full"
         >
-          <div
-            className={`p-1 rounded-lg ${
-              location.pathname === '/' ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+          <Link
+            to="/"
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
+              location.pathname === '/' ? 'text-[#071A3D]' : 'text-slate-400'
             }`}
           >
-            <Home className="w-5 h-5" strokeWidth={location.pathname === '/' ? 2.5 : 2} />
-          </div>
-          <span className="text-[10px] mt-0.5 font-bold">Home</span>
-        </Link>
+            <div
+              className={`p-1 rounded-lg ${
+                location.pathname === '/' ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+              }`}
+            >
+              <Home className="w-5 h-5" strokeWidth={location.pathname === '/' ? 2.5 : 2} />
+            </div>
+            <span className="text-[10px] mt-0.5 font-bold">Home</span>
+          </Link>
 
-        <Link
-          to="/dashboard"
-          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
-            location.pathname.startsWith('/dashboard') ? 'text-[#071A3D]' : 'text-slate-400'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg ${
-              location.pathname.startsWith('/dashboard') ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+          <Link
+            to="/dashboard"
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
+              location.pathname.startsWith('/dashboard') ? 'text-[#071A3D]' : 'text-slate-400'
             }`}
           >
-            <LayoutDashboard className="w-5 h-5" strokeWidth={location.pathname.startsWith('/dashboard') ? 2.5 : 2} />
-          </div>
-          <span className="text-[10px] mt-0.5 font-bold">Dashboard</span>
-        </Link>
+            <div
+              className={`p-1 rounded-lg ${
+                location.pathname.startsWith('/dashboard') ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5" strokeWidth={location.pathname.startsWith('/dashboard') ? 2.5 : 2} />
+            </div>
+            <span className="text-[10px] mt-0.5 font-bold">Dashboard</span>
+          </Link>
 
-        <Link
-          to="/exams"
-          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
-            location.pathname.startsWith('/exams') ? 'text-[#071A3D]' : 'text-slate-400'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg ${
-              location.pathname.startsWith('/exams') ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+          <Link
+            to="/exams"
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
+              location.pathname.startsWith('/exams') ? 'text-[#071A3D]' : 'text-slate-400'
             }`}
           >
-            <GraduationCap className="w-5 h-5" strokeWidth={location.pathname.startsWith('/exams') ? 2.5 : 2} />
-          </div>
-          <span className="text-[10px] mt-0.5 font-bold">Exams</span>
-        </Link>
+            <div
+              className={`p-1 rounded-lg ${
+                location.pathname.startsWith('/exams') ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+              }`}
+            >
+              <GraduationCap className="w-5 h-5" strokeWidth={location.pathname.startsWith('/exams') ? 2.5 : 2} />
+            </div>
+            <span className="text-[10px] mt-0.5 font-bold">Exams</span>
+          </Link>
 
-        <Link
-          to="/pricing"
-          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
-            location.pathname.startsWith('/pricing') ? 'text-[#071A3D]' : 'text-slate-400'
-          }`}
-        >
-          <div
-            className={`p-1 rounded-lg ${
-              location.pathname.startsWith('/pricing') ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+          <Link
+            to="/pricing"
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-decoration-none select-none ${
+              location.pathname.startsWith('/pricing') ? 'text-[#071A3D]' : 'text-slate-400'
             }`}
           >
-            <Tag className="w-5 h-5" strokeWidth={location.pathname.startsWith('/pricing') ? 2.5 : 2} />
-          </div>
-          <span className="text-[10px] mt-0.5 font-bold">Pricing</span>
-        </Link>
+            <div
+              className={`p-1 rounded-lg ${
+                location.pathname.startsWith('/pricing') ? 'bg-[#071A3D]/10 text-[#071A3D]' : 'text-slate-400'
+              }`}
+            >
+              <Tag className="w-5 h-5" strokeWidth={location.pathname.startsWith('/pricing') ? 2.5 : 2} />
+            </div>
+            <span className="text-[10px] mt-0.5 font-bold">Pricing</span>
+          </Link>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (isAuthenticated) {
-              navigate('/dashboard');
-            } else {
-              openAuthModal('login');
-            }
-          }}
-          className="flex flex-col items-center justify-center flex-1 h-full py-1 text-slate-400 border-none bg-transparent cursor-pointer"
-        >
-          <div className="p-1 rounded-lg text-slate-400">
-            <User className="w-5 h-5" strokeWidth={2} />
-          </div>
-          <span className="text-[10px] mt-0.5 font-bold">{isAuthenticated ? 'Account' : 'Sign In'}</span>
-        </button>
-      </nav>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex flex-col items-center justify-center flex-1 h-full py-1 text-slate-400 border-none bg-transparent cursor-pointer"
+          >
+            <div className="p-1 rounded-lg text-slate-400">
+              <User className="w-5 h-5" strokeWidth={2} />
+            </div>
+            <span className="text-[10px] mt-0.5 font-bold">Account</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 };

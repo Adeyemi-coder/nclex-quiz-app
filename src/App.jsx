@@ -29,8 +29,11 @@ import { ProfileSettingsPage } from './pages/dashboard/ProfileSettingsPage';
 import Quiz from './components/Quiz/Quiz';
 import ResultsView from './components/Quiz/ResultsView';
 
+// Route guard for logged-in-only pages
+import ProtectedRoute from './components/ProtectedRoute';
+
 // Splash (adjust this path if your file lives somewhere else)
-import SplashScreen from './components/Splash/SplashScreen';
+import SplashScreen from './components/Splash/SplashScreen.jsx';
 
 export default function App() {
   // Show the splash once per browser session
@@ -67,20 +70,23 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
         </Route>
 
-        {/* 2. Authenticated Learner Dashboard Shell */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardHome />} />
-          <Route path="exams" element={<ExamsListingPage />} />
-          <Route path="progress" element={<ProgressPage />} />
-          <Route path="bookmarks" element={<BookmarksPage />} />
-          <Route path="history" element={<StudyHistoryPage />} />
-          <Route path="study-guide" element={<StudyGuidePage />} />
-          <Route path="settings" element={<ProfileSettingsPage />} />
-        </Route>
+        {/* Everything below requires a signed-in user */}
+        <Route element={<ProtectedRoute />}>
+          {/* 2. Authenticated Learner Dashboard Shell */}
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<DashboardHome />} />
+            <Route path="exams" element={<ExamsListingPage />} />
+            <Route path="progress" element={<ProgressPage />} />
+            <Route path="bookmarks" element={<BookmarksPage />} />
+            <Route path="history" element={<StudyHistoryPage />} />
+            <Route path="study-guide" element={<StudyGuidePage />} />
+            <Route path="settings" element={<ProfileSettingsPage />} />
+          </Route>
 
-        {/* 3. Dedicated Focused Exam Engine */}
-        <Route path="/quiz/:category?" element={<Quiz />} />
-        <Route path="/results" element={<ResultsView />} />
+          {/* 3. Dedicated Focused Exam Engine */}
+          <Route path="/quiz/:category?" element={<Quiz />} />
+          <Route path="/results" element={<ResultsView />} />
+        </Route>
 
         {/* 4. Global Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
