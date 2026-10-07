@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/nclex-quiz-app/',
+  base: '/', // 👈 Updated for Vercel
   build: {
     chunkSizeWarningLimit: 800,
     rollupOptions: {
