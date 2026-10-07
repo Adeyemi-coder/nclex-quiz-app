@@ -32,7 +32,7 @@ const MAIN_NAV = [
 
 const RESOURCE_NAV = [
   { name: 'Study Guide', path: '/dashboard/study-guide' },
-  { name: 'Clinical Reference', path: '/dashboard/reference' },
+  
 ];
 
 const UTILITY_NAV = [
@@ -46,7 +46,7 @@ const MOBILE_BOTTOM_NAV = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, end: true },
   { name: 'Exams', path: '/dashboard/exams', icon: GraduationCap },
   { name: 'Facts', path: '/dashboard/study-guide', icon: BookOpen },
-  { name: 'Reference', path: '/dashboard/reference', icon: FlaskConical },
+  { name: 'Settings', path: '/dashboard/settings', icon: Settings },
 ];
 
 const SAMPLE_NOTIFICATIONS = [
@@ -405,10 +405,7 @@ export const DashboardLayout = ({ examName = 'NMCN RN Professional' }) => {
       </div>
 
       {/*
-        MOBILE BOTTOM NAVIGATION BAR
-        Pure Tailwind: 'flex lg:hidden' with NO inline 'display' property,
-        so it is completely hidden on screens >= 1024px.
-        Icon colour comes from currentColor, so dark mode works automatically.
+       
       */}
       <nav
         aria-label="Mobile Navigation"

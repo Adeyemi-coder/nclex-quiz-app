@@ -35,14 +35,11 @@ export default function Quiz() {
 
   // 1. Question Set Slicing with Multi-Strategy Resolution
   const activeQuestions = useMemo(() => {
-    // Priority A: Custom generated questions (AI drills or custom mocks)
     if (location.state?.customQuestions?.length > 0) {
       return location.state.customQuestions.map(shuffleQuestionOptions);
     }
 
     const cleanParam = (category || 'all').toLowerCase().trim();
-
-    // Priority B: Check official NMCN Course Registry with flexible key lookup
     let targetCourseKey = category || 'medicalSurgicalNursing';
     let courseData = COURSE_REGISTRY ? COURSE_REGISTRY[targetCourseKey] : null;
 
@@ -63,7 +60,6 @@ export default function Quiz() {
       return selectAdaptiveExamSet(targetCourseKey, courseData.questions, attemptCount);
     }
 
-    // Priority C: Universal Database Filter matching slug, category, and subject keywords
     if (!Array.isArray(allQuestions) || allQuestions.length === 0) {
       return [];
     }
@@ -79,7 +75,6 @@ export default function Quiz() {
       const combined = `${qCat} ${qSub}`;
 
       if (qCat === cleanParam) return true;
-
       if (cleanParam.includes('medicalsurgical') || cleanParam.includes('medsurg')) {
         return combined.includes('medical') || combined.includes('surgical') || combined.includes('med-surg');
       }
@@ -137,7 +132,6 @@ export default function Quiz() {
       if (cleanParam.includes('politic') || cleanParam.includes('policy') || cleanParam.includes('management') || cleanParam.includes('leadership')) {
         return combined.includes('politic') || combined.includes('policy') || combined.includes('management') || combined.includes('leadership');
       }
-
       if (cleanParam.includes('cardio')) return combined.includes('cardio') || combined.includes('hemodynamic');
       if (cleanParam.includes('respiratory')) return combined.includes('respiratory') || combined.includes('abg') || combined.includes('ventilation');
       if (cleanParam.includes('dosage')) return combined.includes('dosage') || combined.includes('calculation') || combined.includes('drip');
@@ -159,7 +153,6 @@ export default function Quiz() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [sataSubmittedMap, setSataSubmittedMap] = useState({});
 
-  // Initialize saved bookmarks from localStorage
   const [savedItems, setSavedItems] = useState(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('nclex_bookmarked_questions') || '[]');
@@ -229,13 +222,9 @@ export default function Quiz() {
         const trimmed = val.trim();
         if (trimmed.length === 1) {
           const upper = trimmed.toUpperCase();
-          if (upper >= 'A' && upper <= 'Z') {
-            return upper.charCodeAt(0) - 65;
-          }
+          if (upper >= 'A' && upper <= 'Z') return upper.charCodeAt(0) - 65;
         }
-        if (!isNaN(Number(trimmed))) {
-          return Number(trimmed);
-        }
+        if (!isNaN(Number(trimmed))) return Number(trimmed);
         const textIdx = opts.indexOf(trimmed.toLowerCase());
         if (textIdx !== -1) return textIdx;
       }
@@ -319,7 +308,6 @@ export default function Quiz() {
     });
   }
 
-  // Persistent Bookmark Toggle
   function toggleBookmark() {
     if (!currentQ.question && !currentQ.stem) return;
 
@@ -360,7 +348,7 @@ export default function Quiz() {
     }
   }
 
-  // 5. Final Submission & Telemetry Storage
+  // 5. Final Submission
   function handleFinalSubmit() {
     setIsSubmitted(true);
 
@@ -472,29 +460,17 @@ export default function Quiz() {
       missedQuestions: missedQuestionsList,
     };
 
-    // 1. Sync to studyHistory & quizResults
     try {
       const existingHistory = JSON.parse(localStorage.getItem('studyHistory') || '[]');
       localStorage.setItem('studyHistory', JSON.stringify([sessionRecord, ...existingHistory]));
-    } catch (e) {
-      console.warn('Could not write to studyHistory', e);
-    }
-
-    try {
       const existingQuizResults = JSON.parse(localStorage.getItem('quizResults') || '[]');
       localStorage.setItem('quizResults', JSON.stringify([sessionRecord, ...existingQuizResults]));
-    } catch (e) {
-      console.warn('Could not write to quizResults', e);
-    }
-
-    try {
       const existingLegacy = JSON.parse(localStorage.getItem('nclex_quiz_history') || '[]');
       localStorage.setItem('nclex_quiz_history', JSON.stringify([sessionRecord, ...existingLegacy]));
     } catch (e) {
-      console.warn('Could not write to nclex_quiz_history', e);
+      console.warn('Could not write exam history', e);
     }
 
-    // 2. Sync to nclex_user_progress
     try {
       const rawUserProg = localStorage.getItem('nclex_user_progress');
       const prog = rawUserProg ? JSON.parse(rawUserProg) : {
@@ -528,10 +504,9 @@ export default function Quiz() {
 
       localStorage.setItem('nclex_user_progress', JSON.stringify(updatedProg));
     } catch (e) {
-      console.warn('Could not update nclex_user_progress', e);
+      console.warn('Could not update user progress', e);
     }
 
-    // 3. Build Detailed Review List for ResultsView
     const reviewList = activeQuestions.map((q, idx) => {
       const selected = userAnswers[idx];
       const rawOptions = q.options || q.choices || q.answers || [];
@@ -634,13 +609,13 @@ export default function Quiz() {
 
   if (!activeQuestions.length) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-16 text-center">
+      <div className="mx-auto max-w-3xl px-4 py-12 text-center">
         <AlertCircle className="mx-auto h-8 w-8 text-[#62697A]" strokeWidth={1.8} />
         <h2 className="mt-3 text-sm font-semibold text-[#202535]">No clinical questions available for this module</h2>
         <p className="mt-1 text-xs text-slate-500 font-mono">Category query: "{category}"</p>
         <button
           onClick={() => navigate('/exams')}
-          className="mt-4 px-4 py-2 bg-[#071A3D] text-white text-xs font-bold rounded cursor-pointer"
+          className="mt-4 px-4 py-2.5 bg-[#071A3D] text-white text-xs font-bold rounded-lg cursor-pointer"
         >
           Return to All Question Banks
         </button>
@@ -657,38 +632,42 @@ export default function Quiz() {
     'Licensure Simulation';
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-3xl px-3 py-4 sm:px-6 sm:py-8">
       
-      {/* Top Telemetry & Tools Bar */}
-      <div className="mb-8 flex items-center justify-between border-b border-[#DDD9CC] pb-4">
+      {/* Top Telemetry & Tools Bar: Mobile-First Responsive Layout */}
+      <div className="mb-6 flex flex-col gap-3 border-b border-[#DDD9CC] pb-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:pb-4">
         
-        {/* Left: Home Return, Item Counter & Course Identification */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            title="Exit exam and return Home"
-            className="flex items-center gap-1.5 text-xs font-bold text-[#1D2A59] hover:underline cursor-pointer"
-          >
-            <span>← Home</span>
-          </button>
-          <span className="text-[#DDD9CC]">•</span>
-          <span className="font-mono text-xs font-bold tracking-wider text-[#1D2A59]">
-            ITEM {currentIdx + 1} OF {activeQuestions.length}
-          </span>
-          <span className="text-[#DDD9CC]">•</span>
-          <span className="text-xs font-medium text-[#62697A] truncate max-w-[160px] sm:max-w-none">
+        {/* Row 1 on Mobile: Home, Counter & Category */}
+        <div className="flex items-center justify-between sm:justify-start sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              title="Exit exam and return Home"
+              className="flex items-center gap-1 text-xs font-bold text-[#1D2A59] hover:underline cursor-pointer"
+            >
+              <span>← Home</span>
+            </button>
+            <span className="text-[#DDD9CC]">•</span>
+            <span className="font-mono text-xs font-bold tracking-wider text-[#1D2A59]">
+              ITEM {currentIdx + 1} OF {activeQuestions.length}
+            </span>
+          </div>
+
+          <span className="text-xs font-medium text-[#62697A] truncate max-w-[130px] sm:max-w-[200px] md:max-w-none text-right">
             {courseDisplayName}
           </span>
         </div>
 
-        {/* Right: Mode Toggle, Timer, Pause, Grid Navigator, Bookmark */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="flex items-center rounded border border-[#DDD9CC] bg-[#FBF8EF] p-0.5 text-xs">
+        {/* Row 2 on Mobile: Mode, Timer, Navigator Grid, Bookmark */}
+        <div className="flex items-center justify-between sm:justify-end gap-2">
+          
+          {/* Mode Switcher */}
+          <div className="flex items-center rounded-lg border border-[#DDD9CC] bg-[#FBF8EF] p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setExamMode('tutor')}
-              className={`rounded px-2.5 py-1 font-medium transition-colors cursor-pointer ${
+              className={`rounded-md px-2.5 py-1 font-medium transition-colors cursor-pointer text-xs ${
                 examMode === 'tutor'
                   ? 'bg-[#1D2A59] text-[#F4EEDC]'
                   : 'text-[#62697A] hover:text-[#202535]'
@@ -699,7 +678,7 @@ export default function Quiz() {
             <button
               type="button"
               onClick={() => setExamMode('timed')}
-              className={`rounded px-2.5 py-1 font-medium transition-colors cursor-pointer ${
+              className={`rounded-md px-2.5 py-1 font-medium transition-colors cursor-pointer text-xs ${
                 examMode === 'timed'
                   ? 'bg-[#1D2A59] text-[#F4EEDC]'
                   : 'text-[#62697A] hover:text-[#202535]'
@@ -709,9 +688,10 @@ export default function Quiz() {
             </button>
           </div>
 
+          {/* Timed Controls */}
           {examMode === 'timed' && (
-            <div className="flex items-center gap-2">
-              <div className={`flex items-center gap-1.5 font-mono text-xs font-semibold ${
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className={`flex items-center gap-1 font-mono text-xs font-semibold ${
                 timeLeft < 300 ? 'text-[#A65353]' : 'text-[#202535]'
               }`}>
                 <Clock className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -722,39 +702,43 @@ export default function Quiz() {
                 type="button"
                 onClick={() => setIsPaused(true)}
                 title="Pause simulation"
-                className="flex h-8 w-8 items-center justify-center rounded border border-[#DDD9CC] bg-[#FBF8EF] text-[#62697A] hover:border-[#1D2A59] hover:text-[#1D2A59] cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#DDD9CC] bg-[#FBF8EF] text-[#62697A] hover:border-[#1D2A59] hover:text-[#1D2A59] cursor-pointer"
               >
                 <Pause className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setShowNavigator(true)}
-            title="Open Question Navigator Grid"
-            className="flex h-8 items-center gap-1.5 rounded border border-[#DDD9CC] bg-[#FBF8EF] px-2.5 text-xs font-semibold text-[#202535] transition-colors hover:border-[#1D2A59] hover:text-[#1D2A59] cursor-pointer"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.8} />
-            <span className="hidden sm:inline">Grid</span>
-          </button>
+          {/* Quick Matrix Grid & Bookmark */}
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setShowNavigator(true)}
+              title="Open Question Navigator Grid"
+              className="flex h-8 items-center gap-1 rounded-lg border border-[#DDD9CC] bg-[#FBF8EF] px-2.5 text-xs font-semibold text-[#202535] transition-colors hover:border-[#1D2A59] hover:text-[#1D2A59] cursor-pointer"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.8} />
+              <span className="inline text-xs">Grid</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={toggleBookmark}
-            title={isBookmarked ? 'Bookmarked' : 'Bookmark item'}
-            className={`flex h-8 w-8 items-center justify-center rounded border transition-colors cursor-pointer ${
-              isBookmarked
-                ? 'border-[#B89A5A] bg-[#B89A5A] text-white'
-                : 'border-[#DDD9CC] bg-[#FBF8EF] text-[#62697A] hover:border-[#1D2A59] hover:text-[#1D2A59]'
-            }`}
-          >
-            <Bookmark className="h-3.5 w-3.5" strokeWidth={1.8} />
-          </button>
+            <button
+              type="button"
+              onClick={toggleBookmark}
+              title={isBookmarked ? 'Bookmarked' : 'Bookmark item'}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors cursor-pointer ${
+                isBookmarked
+                  ? 'border-[#B89A5A] bg-[#B89A5A] text-white'
+                  : 'border-[#DDD9CC] bg-[#FBF8EF] text-[#62697A] hover:border-[#1D2A59] hover:text-[#1D2A59]'
+              }`}
+            >
+              <Bookmark className="h-3.5 w-3.5" strokeWidth={1.8} />
+            </button>
+          </div>
+
         </div>
       </div>
 
-      {/* Pacing Warning Banner (< 5 min remaining) */}
+      {/* Pacing Warning Banner */}
       <TimeWarningBanner
         timeLeft={timeLeft}
         isVisible={examMode === 'timed' && timeLeft <= 300 && !warningDismissed && !isSubmitted}
@@ -762,28 +746,30 @@ export default function Quiz() {
       />
 
       {/* Main Clinical Question Workspace */}
-      <main>
-        <div className="flex items-center justify-between text-xs text-[#62697A]">
-          <span className="font-semibold uppercase tracking-wider text-[#283A78]">
+      <main className="w-full">
+        {/* Metadata Indicators: Responsive Flex */}
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-xs text-[#62697A]">
+          <span className="font-semibold uppercase tracking-wider text-[#283A78] break-words">
             {currentQ.topic || 'Clinical Nursing Judgment'} • {currentQ.subtopic || currentQ.subCategory || 'Application'}
           </span>
-          <span className={`font-semibold ${isSATA ? 'text-[#B89A5A]' : 'text-slate-500'}`}>
-            {isSATA ? 'Select All That Apply (Multi-Response)' : 'Single Best Response'}
+          <span className={`font-semibold shrink-0 ${isSATA ? 'text-[#B89A5A]' : 'text-slate-500'}`}>
+            {isSATA ? 'Select All That Apply' : 'Single Best Response'}
           </span>
         </div>
 
-        <h1 className="mt-4 text-lg font-medium leading-relaxed tracking-tight text-[#202535] sm:text-xl">
+        {/* Stem / Vignette */}
+        <h1 className="mt-3 text-base sm:text-lg md:text-xl font-medium leading-relaxed tracking-tight text-[#202535]">
           {currentQ.question || currentQ.stem || 'Vignette stem details unavailable.'}
         </h1>
 
         {isSATA && (
-          <p className="mt-2 text-xs font-semibold text-[#283A78] italic">
+          <p className="mt-1.5 text-xs font-semibold text-[#283A78] italic">
             Select all choices that are clinically indicated.
           </p>
         )}
 
         {/* Option Selection List */}
-        <div className="mt-6 space-y-3">
+        <div className="mt-5 space-y-2.5 sm:space-y-3">
           {questionOptions.map((option, idx) => {
             const letter = String.fromCharCode(65 + idx);
             const isSelected = isSATA
@@ -798,16 +784,16 @@ export default function Quiz() {
             let badgeStyle = 'text-[#62697A] border-[#DDD9CC] bg-[#F4EEDC]';
 
             if (isSelected && (examMode !== 'tutor' || !hasAnswered)) {
-              rowStyle = 'border-2 border-[#1D2A59] bg-[#FBF8EF] ring-1 ring-[#1D2A59] shadow-xs text-[#202535]';
+              rowStyle = 'border-2 border-[#1D2A59] bg-[#FBF8EF] ring-1 ring-[#1D2A59] text-[#202535]';
               badgeStyle = 'text-[#F4EEDC] border-[#1D2A59] bg-[#1D2A59]';
             }
 
             if (examMode === 'tutor' && hasAnswered) {
               if (isOptionCorrect) {
-                rowStyle = 'border-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-semibold shadow-xs';
+                rowStyle = 'border-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-semibold';
                 badgeStyle = 'text-white border-emerald-600 bg-emerald-600';
               } else if (isSelected && !isOptionCorrect) {
-                rowStyle = 'border-2 border-rose-600 bg-rose-50 text-rose-950 font-semibold shadow-xs';
+                rowStyle = 'border-2 border-rose-600 bg-rose-50 text-rose-950 font-semibold';
                 badgeStyle = 'text-white border-rose-600 bg-rose-600';
               } else {
                 rowStyle = 'border border-slate-200 bg-slate-50/70 text-slate-400 opacity-60';
@@ -819,21 +805,23 @@ export default function Quiz() {
               <div
                 key={idx}
                 onClick={() => handleSelectOption(idx)}
-                className={`group relative flex cursor-pointer items-center justify-between rounded-xl px-4 py-3.5 transition-all ${rowStyle}`}
+                className={`group relative flex cursor-pointer items-start justify-between rounded-xl p-3 sm:px-4 sm:py-3.5 transition-all gap-3 ${rowStyle}`}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-3 w-full min-w-0">
+                  {/* Badge aligned to top of multiline text */}
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold transition-colors ${badgeStyle}`}
+                    className={`mt-0.5 flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold transition-colors ${badgeStyle}`}
                   >
                     {isSATA && isSelected ? (
-                      <CheckSquare className="h-4 w-4" />
+                      <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     ) : (
                       letter
                     )}
                   </span>
 
+                  {/* Option Text: Allow natural wrap and breaking */}
                   <span
-                    className={`text-sm leading-relaxed ${
+                    className={`text-xs sm:text-sm leading-relaxed break-words flex-1 ${
                       isStruck ? 'line-through text-slate-400 opacity-60' : ''
                     }`}
                   >
@@ -841,14 +829,15 @@ export default function Quiz() {
                   </span>
                 </div>
 
+                {/* Strikethrough action button: Visible & accessible on touch devices */}
                 <button
                   type="button"
                   onClick={(e) => toggleStrikethrough(idx, e)}
                   title={isStruck ? 'Restore choice' : 'Eliminate choice'}
-                  className={`p-1 transition-opacity cursor-pointer ${
+                  className={`shrink-0 p-1.5 rounded-md transition-all cursor-pointer ${
                     isStruck 
                       ? 'text-rose-600 opacity-100' 
-                      : 'text-slate-400 opacity-0 group-hover:opacity-100 hover:text-slate-700'
+                      : 'text-slate-400 opacity-70 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 hover:text-slate-700'
                   }`}
                 >
                   <MinusCircle className="h-4 w-4" strokeWidth={1.8} />
@@ -865,7 +854,7 @@ export default function Quiz() {
               type="button"
               disabled={!Array.isArray(currentAnswer) || currentAnswer.length === 0}
               onClick={() => setSataSubmittedMap((prev) => ({ ...prev, [currentIdx]: true }))}
-              className="px-4 py-2 rounded bg-[#1D2A59] text-white text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#283A78] cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-[#1D2A59] text-white text-xs font-bold uppercase tracking-wider disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#283A78] cursor-pointer transition-colors"
             >
               Confirm Choices &amp; Check Answer
             </button>
@@ -874,18 +863,18 @@ export default function Quiz() {
 
         {/* Tutor Rationale Drawer */}
         {examMode === 'tutor' && hasAnswered && (
-          <div className="mt-8 rounded-xl border border-[#DDD9CC] bg-[#FBF8EF] p-5 shadow-xs">
+          <div className="mt-6 rounded-xl border border-[#DDD9CC] bg-[#FBF8EF] p-4 sm:p-5 shadow-xs">
             <div className="flex items-center gap-2">
               {isCorrect ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" strokeWidth={2.2} />
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" strokeWidth={2.2} />
                   <span className="text-xs font-bold tracking-wide uppercase text-emerald-700">
                     Correct Clinical Judgment
                   </span>
                 </>
               ) : (
                 <>
-                  <XCircle className="h-4 w-4 text-rose-600" strokeWidth={2.2} />
+                  <XCircle className="h-4 w-4 text-rose-600 shrink-0" strokeWidth={2.2} />
                   <span className="text-xs font-bold tracking-wide uppercase text-rose-700">
                     Remediation Required
                   </span>
@@ -893,13 +882,13 @@ export default function Quiz() {
               )}
             </div>
 
-            <p className="mt-3 text-sm leading-relaxed text-[#202535]">
+            <p className="mt-3 text-xs sm:text-sm leading-relaxed text-[#202535]">
               <strong className="font-semibold text-[#1D2A59]">Rationale: </strong>
               {currentQ.rationale || currentQ.explanation || 'Assess patient vitals, verify contraindications, and intervene according to established clinical nursing protocols.'}
             </p>
 
             {currentQ.clinicalPearl && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900">
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 leading-relaxed">
                 <span className="font-bold uppercase tracking-wider text-amber-800">Clinical Pearl: </span>
                 {currentQ.clinicalPearl}
               </div>
@@ -907,13 +896,13 @@ export default function Quiz() {
           </div>
         )}
 
-        {/* Bottom Pagination & Finish Button */}
-        <div className="mt-10 flex items-center justify-between border-t border-[#DDD9CC] pt-6">
+        {/* Bottom Pagination: Stack on extra small, flex on sm+ */}
+        <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-[#DDD9CC] pt-5">
           <button
             type="button"
             disabled={currentIdx === 0}
             onClick={() => setCurrentIdx((prev) => Math.max(0, prev - 1))}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded border border-[#DDD9CC] bg-[#FBF8EF] px-5 text-xs font-semibold text-[#202535] transition-colors hover:bg-[#F4EEDC] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+            className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#DDD9CC] bg-[#FBF8EF] px-5 text-xs font-semibold text-[#202535] transition-colors hover:bg-[#F4EEDC] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
             <span>Previous Item</span>
@@ -923,7 +912,7 @@ export default function Quiz() {
             <button
               type="button"
               onClick={handleFinalSubmit}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded bg-emerald-700 px-6 text-xs font-semibold text-[#F4EEDC] transition-colors hover:bg-emerald-800 focus:outline-none cursor-pointer"
+              className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 text-xs font-semibold text-[#F4EEDC] transition-colors hover:bg-emerald-800 focus:outline-none cursor-pointer"
             >
               <span>Finish Examination</span>
             </button>
@@ -931,7 +920,7 @@ export default function Quiz() {
             <button
               type="button"
               onClick={() => setCurrentIdx((prev) => Math.min(activeQuestions.length - 1, prev + 1))}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded bg-[#1D2A59] px-6 text-xs font-semibold text-[#F4EEDC] transition-colors hover:bg-[#283A78] focus:outline-none cursor-pointer"
+              className="w-full sm:w-auto inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#1D2A59] px-6 text-xs font-semibold text-[#F4EEDC] transition-colors hover:bg-[#283A78] focus:outline-none cursor-pointer"
             >
               <span>Next Item</span>
               <ChevronRight className="h-4 w-4" strokeWidth={1.8} />

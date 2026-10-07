@@ -25,18 +25,17 @@ import { StudyHistoryPage } from './pages/dashboard/StudyHistoryPage';
 import StudyGuidePage from './pages/dashboard/StudyGuidePage';
 import { ProfileSettingsPage } from './pages/dashboard/ProfileSettingsPage';
 
-// Core Examination Runner & Review Components
+
 import Quiz from './components/Quiz/Quiz';
 import ResultsView from './components/Quiz/ResultsView';
 
-// Route guard for logged-in-only pages
+
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Splash (adjust this path if your file lives somewhere else)
 import SplashScreen from './components/Splash/SplashScreen.jsx';
 
 export default function App() {
-  // Show the splash once per browser session
+
   const [showSplash, setShowSplash] = useState(() => {
     try {
       return sessionStorage.getItem('splash_seen') !== '1';
