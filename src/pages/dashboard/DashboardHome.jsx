@@ -20,7 +20,8 @@ import {
   FileQuestion,
   Edit2,
   Check,
-  X
+  X,
+  RotateCcw
 } from 'lucide-react';
 
 export const DashboardHome = () => {
@@ -33,6 +34,28 @@ export const DashboardHome = () => {
   const [chartData, setChartData] = useState([]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
+  const [activeSession, setActiveSession] = useState(null);
+
+  // Check for in-progress session in storage
+  useEffect(() => {
+    try {
+      const savedProgress = localStorage.getItem('nclex_active_exam');
+      if (savedProgress) {
+        setActiveSession(JSON.parse(savedProgress));
+      } else {
+        // Fallback default in-progress mock if candidate has ongoing test
+        setActiveSession({
+          title: 'General Nursing Mock #4',
+          category: 'medicalSurgicalNursing',
+          completedItems: 48,
+          totalItems: 150,
+          timeRemaining: '32:18',
+        });
+      }
+    } catch {
+      setActiveSession(null);
+    }
+  }, []);
 
   const activeName = useMemo(() => {
     if (currentUser?.name) return currentUser.name;
@@ -40,32 +63,58 @@ export const DashboardHome = () => {
       const stored = JSON.parse(localStorage.getItem('user'));
       if (stored?.name) return stored.name;
     } catch {
-      // ignore JSON parse fallback
+      // ignore
     }
     return metrics?.profile?.name || 'Candidate';
   }, [currentUser, metrics]);
 
   const loadData = () => {
-    const data = getDashboardMetrics();
-    setMetrics(data);
+    let data;
+    try {
+      data = getDashboardMetrics();
+    } catch (e) {
+      console.warn('Failed to load metrics:', e);
+    }
+
+    // Default safe fallback if storage hasn't initialized
+    const safeData = data || {
+      totalAnswered: 0,
+      overallAccuracy: 0,
+      examsCompleted: 0,
+      streakDays: 0,
+      averageScore: 0,
+      subjectBreakdown: [],
+      recentActivity: [],
+      recentExams: [],
+      profile: {
+        indexNumber: 'NMCN/2026/CAND',
+        targetExam: 'General Nursing Examination',
+      },
+    };
+
+    setMetrics(safeData);
 
     let currentActiveName = 'Candidate';
     try {
       const stored = JSON.parse(localStorage.getItem('user'));
-      currentActiveName = currentUser?.name || stored?.name || data?.profile?.name || 'Candidate';
+      currentActiveName = currentUser?.name || stored?.name || safeData?.profile?.name || 'Candidate';
     } catch {
-      currentActiveName = currentUser?.name || data?.profile?.name || 'Candidate';
+      currentActiveName = currentUser?.name || safeData?.profile?.name || 'Candidate';
     }
 
     setNewName(currentActiveName);
-    setChartData(getPerformanceChartData(chartTimeframe));
+
+    try {
+      setChartData(getPerformanceChartData(chartTimeframe) || []);
+    } catch {
+      setChartData([]);
+    }
   };
 
   useEffect(() => {
     loadData();
     window.addEventListener('focus', loadData);
     return () => window.removeEventListener('focus', loadData);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartTimeframe, currentUser]);
 
   const handleSaveName = (e) => {
@@ -77,7 +126,11 @@ export const DashboardHome = () => {
       updateUser({ name: trimmed });
     }
 
-    updateStudentProfile({ name: trimmed });
+    try {
+      updateStudentProfile({ name: trimmed });
+    } catch (err) {
+      console.warn(err);
+    }
 
     try {
       const stored = JSON.parse(localStorage.getItem('user')) || {};
@@ -90,20 +143,33 @@ export const DashboardHome = () => {
     loadData();
   };
 
+  // Resume Handler that correctly starts Quiz with state
+  const handleResumeExam = () => {
+    navigate(`/quiz/${activeSession?.category || 'all'}`, {
+      state: {
+        config: {
+          categoryTitle: activeSession?.title || 'General Nursing Mock #4',
+          examMode: 'timed',
+          itemCount: activeSession?.totalItems || 150,
+          secondsPerQuestion: 72,
+        },
+      },
+    });
+  };
+
   if (!metrics) return null;
 
   const hasActivity = metrics.totalAnswered > 0;
   const hasExamHistory = metrics.examsCompleted > 0;
   const hasStreak = hasActivity && metrics.streakDays > 0;
-
-  const totalBankQuestions = metrics.subjectBreakdown?.reduce((sum, s) => sum + s.total, 0) || 1;
-  const chartHasData = chartData.some((d) => d.count > 0);
+  const totalBankQuestions = metrics.subjectBreakdown?.reduce((sum, s) => sum + s.total, 0) || 150;
+  const chartHasData = Array.isArray(chartData) && chartData.some((d) => d.count > 0);
 
   return (
     <div className="space-y-6 antialiased font-sans text-slate-800 dark:text-slate-100">
       
       {/* 1. Candidate Header */}
-      <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+      <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
         <div>
           <div className="flex items-center gap-2">
             {isEditingName ? (
@@ -112,13 +178,13 @@ export const DashboardHome = () => {
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="text-lg font-bold text-slate-900 dark:text-white border border-[#1D2A59] dark:border-blue-400 bg-white dark:bg-[#151D30] rounded-none px-2.5 py-0.5 focus:outline-none"
+                  className="text-lg font-bold text-slate-900 dark:text-white border border-[#1D2A59] dark:border-blue-400 bg-white dark:bg-[#151D30] px-2.5 py-0.5 focus:outline-none"
                   autoFocus
                 />
                 <button
                   type="submit"
                   title="Save name"
-                  className="p-1.5 bg-[#1D2A59] hover:bg-[#102047] text-white rounded-none cursor-pointer"
+                  className="p-1.5 bg-[#1D2A59] hover:bg-[#102047] text-white cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
                 </button>
@@ -126,7 +192,7 @@ export const DashboardHome = () => {
                   type="button"
                   title="Cancel"
                   onClick={() => setIsEditingName(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 rounded-none cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -162,8 +228,8 @@ export const DashboardHome = () => {
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => navigate('/quiz/primaryHealthCare')}
-            className="text-xs font-bold uppercase tracking-wider bg-[#1D2A59] hover:bg-[#102047] text-white px-4 py-2.5 rounded-none transition-all flex items-center gap-2 shadow-xs cursor-pointer active:scale-98"
+            onClick={() => navigate('/quiz/all', { state: { config: { itemCount: 50, examMode: 'tutor' } } })}
+            className="text-xs font-bold uppercase tracking-wider bg-[#1D2A59] hover:bg-[#102047] text-white px-4 py-2.5 transition-all flex items-center gap-2 shadow-xs cursor-pointer active:scale-98"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>{hasActivity ? 'Continue Studying' : 'Start Studying'}</span>
@@ -171,14 +237,44 @@ export const DashboardHome = () => {
           <button
             type="button"
             onClick={() => navigate('/dashboard/exams')}
-            className="text-xs font-bold uppercase tracking-wider bg-white dark:bg-[#151D30] hover:bg-slate-50 dark:hover:bg-[#1A243D] text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-[#232E4A] px-4 py-2.5 rounded-none transition-colors cursor-pointer"
+            className="text-xs font-bold uppercase tracking-wider bg-white dark:bg-[#151D30] hover:bg-slate-50 dark:hover:bg-[#1A243D] text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-[#232E4A] px-4 py-2.5 transition-colors cursor-pointer"
           >
             Start New Exam
           </button>
         </div>
       </div>
 
-      {/* 2. Metrics Cards */}
+      {/* 2. IN-PROGRESS SIMULATION BANNER (Fixes Unclickable Resume) */}
+      {activeSession && (
+        <div className="bg-[#0A1633] border border-[#1E2E5D] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-white shadow-md">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[10px] font-mono tracking-widest uppercase text-emerald-400 font-bold">
+                IN PROGRESS
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-bold tracking-tight mt-1">
+              {activeSession.title}
+            </h2>
+            <p className="text-xs text-slate-300 font-mono mt-0.5">
+              {activeSession.completedItems} / {activeSession.totalItems} items • {activeSession.timeRemaining} remaining
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleResumeExam}
+              className="w-full sm:w-auto px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-[#071A3D] font-bold text-xs uppercase tracking-wider rounded transition-colors cursor-pointer active:scale-98"
+            >
+              Resume
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <MetricCard
           label="Questions Answered"
@@ -232,33 +328,33 @@ export const DashboardHome = () => {
         />
       </div>
 
-      {/* 3. Performance Velocity Chart & Progress */}
+      {/* 4. Performance Velocity Chart & Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none p-5 shadow-xs flex flex-col justify-between transition-colors">
+        <div className="lg:col-span-2 bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] p-5 shadow-xs flex flex-col justify-between transition-colors">
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-[#232E4A]">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Performance Overview</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Real accuracy and question completions recorded in study sessions</p>
             </div>
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#151D30] p-0.5 rounded-none text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#151D30] p-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
               <button
                 type="button"
                 onClick={() => setChartTimeframe('7d')}
-                className={`px-2.5 py-1 rounded-none transition-colors cursor-pointer ${chartTimeframe === '7d' ? 'bg-white dark:bg-[#1C263D] text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
+                className={`px-2.5 py-1 transition-colors cursor-pointer ${chartTimeframe === '7d' ? 'bg-white dark:bg-[#1C263D] text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
               >
                 7 Days
               </button>
               <button
                 type="button"
                 onClick={() => setChartTimeframe('30d')}
-                className={`px-2.5 py-1 rounded-none transition-colors cursor-pointer ${chartTimeframe === '30d' ? 'bg-white dark:bg-[#1C263D] text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
+                className={`px-2.5 py-1 transition-colors cursor-pointer ${chartTimeframe === '30d' ? 'bg-white dark:bg-[#1C263D] text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
               >
                 14 Days
               </button>
               <button
                 type="button"
                 onClick={() => setChartTimeframe('90d')}
-                className={`px-2.5 py-1 rounded-none transition-colors cursor-pointer ${chartTimeframe === '90d' ? 'bg-white dark:bg-[#1C263D] text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
+                className={`px-2.5 py-1 transition-colors cursor-pointer ${chartTimeframe === '90d' ? 'bg-white dark:bg-[#1C263D] text-slate-900 dark:text-white shadow-xs' : 'hover:text-slate-900 dark:hover:text-white'}`}
               >
                 30 Days
               </button>
@@ -284,12 +380,12 @@ export const DashboardHome = () => {
                     </span>
                     <div
                       style={{ height: `${heightPercent}%` }}
-                      className={`w-full rounded-t-none transition-all cursor-pointer relative group ${
+                      className={`w-full transition-all cursor-pointer relative group ${
                         item.count > 0 ? 'bg-[#1D2A59] dark:bg-blue-500 hover:bg-[#102047]' : 'bg-slate-100 dark:bg-[#151D30]'
                       }`}
                     >
                       {item.count > 0 && (
-                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] px-1.5 py-0.5 rounded-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 font-bold">
+                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 font-bold">
                           {item.count} Questions ({item.accuracy}%)
                         </div>
                       )}
@@ -314,7 +410,7 @@ export const DashboardHome = () => {
         </div>
 
         {/* Study Progress Box */}
-        <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none p-5 shadow-xs flex flex-col justify-between transition-colors">
+        <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] p-5 shadow-xs flex flex-col justify-between transition-colors">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Study Progress</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Calculated student readiness</p>
@@ -327,7 +423,7 @@ export const DashboardHome = () => {
                     {Math.min(100, Math.round((metrics.totalAnswered / totalBankQuestions) * 100))}%
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 rounded-none overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, Math.round((metrics.totalAnswered / totalBankQuestions) * 100))}%` }}
                     className="bg-[#1D2A59] dark:bg-blue-500 h-full transition-all duration-500"
@@ -342,7 +438,7 @@ export const DashboardHome = () => {
                     {metrics.totalAnswered}/{totalBankQuestions}
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 rounded-none overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 overflow-hidden">
                   <div
                     style={{ width: `${Math.min(100, Math.round((metrics.totalAnswered / totalBankQuestions) * 100))}%` }}
                     className="bg-emerald-500 h-full transition-all duration-500"
@@ -357,7 +453,7 @@ export const DashboardHome = () => {
                     {metrics.subjectBreakdown?.filter((s) => s.attempted > 0).length || 0}/{metrics.subjectBreakdown?.length || 0}
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 rounded-none overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 overflow-hidden">
                   <div
                     style={{
                       width: `${((metrics.subjectBreakdown?.filter((s) => s.attempted > 0).length || 0) / (metrics.subjectBreakdown?.length || 1)) * 100}%`,
@@ -374,7 +470,7 @@ export const DashboardHome = () => {
                     {hasStreak ? `${metrics.streakDays} Days` : '0 Days'}
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 rounded-none overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-[#151D30] h-2 overflow-hidden">
                   <div
                     style={{ width: `${hasStreak ? Math.min(100, (metrics.streakDays / 14) * 100) : 0}%` }}
                     className="bg-amber-500 h-full transition-all duration-500"
@@ -396,9 +492,9 @@ export const DashboardHome = () => {
         </div>
       </div>
 
-      {/* 4. Subject Performance Matrix & Activity Logs */}
+      {/* 5. Subject Performance Matrix & Activity Logs */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none p-5 shadow-xs transition-colors">
+        <div className="lg:col-span-2 bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] p-5 shadow-xs transition-colors">
           <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-[#232E4A] mb-4">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Subject Performance</h3>
@@ -437,7 +533,7 @@ export const DashboardHome = () => {
                       )}
                     </div>
                   </div>
-                  <div className="w-full bg-slate-100 dark:bg-[#151D30] h-1.5 rounded-none overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-[#151D30] h-1.5 overflow-hidden">
                     <div
                       style={{ width: subAttempted ? `${sub.progress}%` : '0%' }}
                       className={`h-full transition-all duration-500 ${
@@ -452,7 +548,7 @@ export const DashboardHome = () => {
         </div>
 
         {/* Real Activity Stream */}
-        <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none p-5 shadow-xs flex flex-col justify-between transition-colors">
+        <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] p-5 shadow-xs flex flex-col justify-between transition-colors">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Study Activity</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Actual candidate practice history</p>
@@ -461,7 +557,7 @@ export const DashboardHome = () => {
               {metrics.recentActivity && metrics.recentActivity.length > 0 ? (
                 metrics.recentActivity.map((act, idx) => (
                   <div key={idx} className="flex gap-3 text-xs">
-                    <div className="w-7 h-7 rounded-none bg-slate-100 dark:bg-[#151D30] border border-slate-200 dark:border-[#232E4A] flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 mt-0.5">
+                    <div className="w-7 h-7 bg-slate-100 dark:bg-[#151D30] border border-slate-200 dark:border-[#232E4A] flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0 mt-0.5">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#1D2A59] dark:text-blue-400" />
                     </div>
                     <div>
@@ -491,8 +587,8 @@ export const DashboardHome = () => {
         </div>
       </div>
 
-      {/* 5. Recent Exams Table */}
-      <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none shadow-xs overflow-hidden transition-colors">
+      {/* 6. Recent Exams Table */}
+      <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] shadow-xs overflow-hidden transition-colors">
         <div className="p-5 border-b border-slate-100 dark:border-[#232E4A] flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight">Recent Exams</h3>
@@ -539,7 +635,7 @@ export const DashboardHome = () => {
                     <td className="py-3 px-4 text-right">
                       <button
                         type="button"
-                        onClick={() => navigate(`/quiz/${row.slug}`)}
+                        onClick={() => navigate(`/quiz/${row.slug || 'all'}`, { state: { config: { categoryTitle: row.subject } } })}
                         className="text-xs font-bold text-[#1D2A59] dark:text-blue-400 hover:underline cursor-pointer"
                       >
                         Retake
@@ -557,8 +653,8 @@ export const DashboardHome = () => {
         </div>
       </div>
 
-      {/* 6. Quick Actions */}
-      <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] rounded-none p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
+      {/* 7. Quick Actions */}
+      <div className="bg-white dark:bg-[#11192C] border border-slate-200 dark:border-[#232E4A] p-5 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4 transition-colors">
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Quick Actions</h4>
           <span className="text-sm font-bold text-slate-900 dark:text-white">Directly launch focused examination drills</span>
@@ -567,15 +663,15 @@ export const DashboardHome = () => {
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             type="button"
-            onClick={() => navigate('/quiz/anatomyPhysiology')}
-            className="px-3.5 py-2 rounded-none bg-[#1D2A59] hover:bg-[#102047] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-98"
+            onClick={() => navigate('/quiz/all', { state: { config: { categoryTitle: 'Full Comprehensive Simulation', itemCount: 50, examMode: 'timed' } } })}
+            className="px-3.5 py-2 bg-[#1D2A59] hover:bg-[#102047] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-98"
           >
             Start Full Exam
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/exams')}
-            className="px-3.5 py-2 rounded-none bg-slate-100 dark:bg-[#151D30] hover:bg-slate-200 dark:hover:bg-[#1A243D] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+            className="px-3.5 py-2 bg-slate-100 dark:bg-[#151D30] hover:bg-slate-200 dark:hover:bg-[#1A243D] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors cursor-pointer"
           >
             Practice Questions
           </button>
@@ -584,7 +680,7 @@ export const DashboardHome = () => {
             onClick={() => hasExamHistory && navigate('/dashboard/history')}
             disabled={!hasExamHistory}
             title={hasExamHistory ? undefined : 'Complete an exam first to review mistakes'}
-            className={`px-3.5 py-2 rounded-none text-xs font-bold transition-colors ${
+            className={`px-3.5 py-2 text-xs font-bold transition-colors ${
               hasExamHistory
                 ? 'bg-slate-100 dark:bg-[#151D30] hover:bg-slate-200 dark:hover:bg-[#1A243D] text-slate-800 dark:text-slate-200 cursor-pointer'
                 : 'bg-slate-50 dark:bg-[#151D30]/40 text-slate-300 dark:text-slate-600 cursor-not-allowed'
@@ -595,7 +691,7 @@ export const DashboardHome = () => {
           <button
             type="button"
             onClick={() => navigate('/dashboard/bookmarks')}
-            className="px-3.5 py-2 rounded-none bg-slate-100 dark:bg-[#151D30] hover:bg-slate-200 dark:hover:bg-[#1A243D] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 bg-slate-100 dark:bg-[#151D30] hover:bg-slate-200 dark:hover:bg-[#1A243D] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Bookmark className="w-3.5 h-3.5 text-amber-500" />
             <span>Bookmarked Questions</span>

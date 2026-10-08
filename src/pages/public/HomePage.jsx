@@ -1,12 +1,10 @@
 ﻿// src/pages/public/HomePage.jsx
-//
-// Requires: npm install framer-motion
-//
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import { QuestionOfTheDay } from '../../components/QuestionOfTheDay';
 import { useCountUp } from '../../hooks/useCountUp';
+import { useAuth } from '../../context/AuthContext';
 import {
   Clock,
   CheckCircle2,
@@ -18,7 +16,7 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// Scroll-reveal wrapper. Skips animation entirely under prefers-reduced-motion.
+// Scroll-reveal wrapper
 // ---------------------------------------------------------------------------
 function Reveal({ children, className = '', delay = 0 }) {
   const shouldReduceMotion = useReducedMotion();
@@ -50,7 +48,7 @@ function Cue({ active, children }) {
       style={{
         backgroundColor: active ? 'rgba(16,185,129,0.15)' : 'transparent',
         color: active ? '#065F46' : 'inherit',
-        fontWeight: active ? 700 : 700,
+        fontWeight: 700,
       }}
     >
       {children}
@@ -59,11 +57,11 @@ function Cue({ active, children }) {
 }
 
 // ---------------------------------------------------------------------------
-// LOGIN MODAL — gates any action that requires an account.
+// LOGIN MODAL
 // ---------------------------------------------------------------------------
-// Find function LoginModal({ open, onClose }) in src/pages/public/HomePage.jsx
 function LoginModal({ open, onClose }) {
   const navigate = useNavigate();
+  const auth = useAuth() || {};
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -81,20 +79,22 @@ function LoginModal({ open, onClose }) {
   const handleLoginSubmit = (e) => {
     e.preventDefault();
 
-    // 1. Save user object to localStorage so Navbar & Dashboard recognize the candidate
     const candidateUser = {
       name: email.split('@')[0] || 'Candidate',
       email: email,
       token: 'demo-token-' + Date.now(),
     };
 
+    if (typeof auth.login === 'function') {
+      auth.login(candidateUser);
+    }
+
     localStorage.setItem('user', JSON.stringify(candidateUser));
     localStorage.setItem('token', candidateUser.token);
 
-    // 2. Close modal & navigate to dashboard
     onClose();
     navigate('/dashboard');
-    window.location.reload(); // Refresh so navbar switches to candidate mode
+    window.location.reload();
   };
 
   return (
@@ -186,7 +186,6 @@ function LoginModal({ open, onClose }) {
 
 // ---------------------------------------------------------------------------
 // HERO AUTOPLAY STATE MACHINE
-// Stages: assemble -> cues -> select -> reveal -> rationale -> update -> loop
 // ---------------------------------------------------------------------------
 const HERO_TIMELINE = [
   { key: 'assemble', duration: 1800 },
@@ -217,8 +216,7 @@ function useHeroTimeline() {
     return () => clearTimeout(id);
   }, [stepIndex, shouldReduceMotion]);
 
-  const stageKey = shouldReduceMotion ? 'rationale' : HERO_TIMELINE[stepIndex].key;
-  return stageKey;
+  return shouldReduceMotion ? 'rationale' : HERO_TIMELINE[stepIndex].key;
 }
 
 // ---------------------------------------------------------------------------
@@ -262,11 +260,57 @@ const SIM_QUESTIONS = [
 export const HomePage = () => {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
+  const auth = useAuth() || {};
 
-  // Login gate
+  // Check login status
+  const isLoggedIn = Boolean(auth.currentUser?.name || localStorage.getItem('user'));
+
+  // Login modal
   const [showLoginModal, setShowLoginModal] = useState(false);
   const openLoginModal = () => setShowLoginModal(true);
   const closeLoginModal = () => setShowLoginModal(false);
+
+  // Authentication-aware navigation helpers
+  const handleStartPractising = () => {
+    if (isLoggedIn) {
+      navigate('/dashboard/exams');
+    } else {
+      openLoginModal();
+    }
+  };
+
+  const handleSeeSubjects = () => {
+    if (isLoggedIn) {
+      navigate('/dashboard/exams');
+    } else {
+      openLoginModal();
+    }
+  };
+
+  const handleResumeMock = () => {
+    if (isLoggedIn) {
+      navigate('/quiz/generalNursing', {
+        state: {
+          config: {
+            categoryTitle: 'General Nursing Mock #4',
+            examMode: 'timed',
+            itemCount: 150,
+            secondsPerQuestion: 72,
+          },
+        },
+      });
+    } else {
+      openLoginModal();
+    }
+  };
+
+  const handleOpenCase = () => {
+    if (isLoggedIn) {
+      navigate('/quiz/emergencyDisasterNursing');
+    } else {
+      openLoginModal();
+    }
+  };
 
   // Animated in-viewport stats
   const statQuestions = useCountUp(900, 1600);
@@ -304,9 +348,7 @@ export const HomePage = () => {
   };
   const handleHeroMouseLeave = () => setHeroTilt({ x: 0, y: 0 });
 
-  // ---------------------------------------------------------------------
   // Simulator preview
-  // ---------------------------------------------------------------------
   const [simIndex, setSimIndex] = useState(0);
   const [simSelected, setSimSelected] = useState(null);
   const [simRevealed, setSimRevealed] = useState(false);
@@ -399,7 +441,7 @@ export const HomePage = () => {
     <>
       <div className="space-y-24 md:space-y-28 py-8 md:py-12 overflow-hidden bg-[#F7F9FC] text-slate-800 antialiased font-sans">
         {/* =========================================================================
-            1. HERO — auto-playing state machine
+            1. HERO
             ========================================================================= */}
         <section className="max-w-7xl mx-auto px-6 relative">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -423,7 +465,7 @@ export const HomePage = () => {
               <div className="pt-2 flex flex-wrap items-center gap-4">
                 <button
                   type="button"
-                  onClick={openLoginModal}
+                  onClick={handleStartPractising}
                   className="px-6 py-3.5 rounded bg-[#071A3D] hover:bg-[#102D63] text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 active:scale-98 shadow-xs cursor-pointer"
                 >
                   <span>Start Practising</span>
@@ -432,7 +474,7 @@ export const HomePage = () => {
 
                 <button
                   type="button"
-                  onClick={openLoginModal}
+                  onClick={handleSeeSubjects}
                   className="px-6 py-3.5 rounded bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
                   See All Subjects
@@ -455,7 +497,7 @@ export const HomePage = () => {
               </div>
             </div>
 
-            {/* Right: exam interface — self-playing demo */}
+            {/* Right: exam interface */}
             <div className="lg:col-span-7 relative perspective-view">
               <div className="absolute -inset-6 bg-blueprint-grid opacity-60 rounded-xl pointer-events-none" />
 
@@ -721,7 +763,7 @@ export const HomePage = () => {
                     <span className="text-slate-400 text-[11px]">Full case walkthrough</span>
                     <button
                       type="button"
-                      onClick={openLoginModal}
+                      onClick={handleOpenCase}
                       className="text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1.5 cursor-pointer"
                     >
                       <span>Open this case</span>
@@ -735,7 +777,7 @@ export const HomePage = () => {
         </section>
 
         {/* =========================================================================
-            4. LIVE SIMULATOR PREVIEW — fully interactive, sample data
+            4. LIVE SIMULATOR PREVIEW
             ========================================================================= */}
         <section id="simulator" className="max-w-7xl mx-auto px-6">
           <Reveal>
@@ -945,7 +987,7 @@ export const HomePage = () => {
                     </p>
                     <button
                       type="button"
-                      onClick={openLoginModal}
+                      onClick={() => isLoggedIn ? navigate('/quiz/dosageCalculation') : openLoginModal()}
                       className="mt-2 text-xs font-bold text-amber-400 hover:text-amber-300 underline block font-mono cursor-pointer"
                     >
                       Start these questions →
@@ -958,7 +1000,7 @@ export const HomePage = () => {
                     <div className="text-xs text-slate-300">48 / 150 items • 32:18 remaining</div>
                     <button
                       type="button"
-                      onClick={openLoginModal}
+                      onClick={handleResumeMock}
                       className="mt-2 w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold rounded text-xs transition-colors cursor-pointer"
                     >
                       Resume
@@ -1038,7 +1080,7 @@ export const HomePage = () => {
               <div className="pt-2 flex flex-wrap items-center justify-center gap-4">
                 <button
                   type="button"
-                  onClick={openLoginModal}
+                  onClick={handleStartPractising}
                   className="px-6 py-3.5 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 shadow-xs active:scale-98 cursor-pointer"
                 >
                   <span>Start Practising</span>
@@ -1047,7 +1089,7 @@ export const HomePage = () => {
 
                 <button
                   type="button"
-                  onClick={openLoginModal}
+                  onClick={handleSeeSubjects}
                   className="px-6 py-3.5 rounded border border-slate-700 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
                 >
                   See All Subjects
